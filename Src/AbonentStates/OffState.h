@@ -8,10 +8,10 @@ namespace starTopologyEmulator
 class OffState final : public State
 {
 public:
-    OffState(const Transitions&);
+	OffState(const Transitions&);
 
 private:
-    void onUpdate() override {}
+	void onUpdate() override {}
 };
 
 } // namespace starTopologyEmulator

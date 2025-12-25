@@ -15,55 +15,55 @@ namespace starTopologyEmulator
 class Emulator : public IEmulator
 {
 public:
-        using SendFunc = std::function<void(Timestamp, std::shared_ptr<IMessage>)>;
-        using RTT = int;
+	using SendFunc = std::function<void(Timestamp, std::shared_ptr<IMessage>)>;
+	using RTT = int;
 
-        Emulator(
-                std::function<std::shared_ptr<IStarStation>(SendFunc, StationID, RTT)>,
-                std::function<std::shared_ptr<IStarHub>(SendFunc, const std::vector<StationID>&)>,
-                int stationCount, int rttSlots);
+	Emulator(
+		std::function<std::shared_ptr<IStarStation>(SendFunc, StationID, RTT)>,
+		std::function<std::shared_ptr<IStarHub>(SendFunc, const std::vector<StationID>&)>,
+		int stationCount, int rttSlots);
 
-        void update(Timestamp currentTime) override;
+	void update(Timestamp currentTime) override;
 
-        std::shared_ptr<IStarHub> hub() const override;
+	std::shared_ptr<IStarHub> hub() const override;
 
-        const std::vector<std::shared_ptr<IStarStation>>& stations() const override;
+	const std::vector<std::shared_ptr<IStarStation>>& stations() const override;
 
-        const std::map<StationID, StateCounter>& stationStats() const override;
+	const std::map<StationID, StateCounter>& stationStats() const override;
 
 private:
-        enum class Direction { ToHub, ToStation };
+	enum class Direction { ToHub, ToStation };
 
-        struct QueuedMessage
-        {
-            Timestamp deliveryTime;
-            Direction direction;
-            int stationID;
-            std::shared_ptr<IMessage> msg;
-        };
+	struct QueuedMessage
+	{
+		Timestamp deliveryTime;
+		Direction direction;
+		StationID stationID;
+		std::shared_ptr<IMessage> msg;
+	};
 
-        SendFunc makeHubSendFunc();
+	SendFunc makeHubSendFunc();
 
-        SendFunc makeStationSendFunc(int stationID);
+	SendFunc makeStationSendFunc(StationID stationID);
 
-        void enqueueFromHub(
-                Timestamp sendTime,
-                std::shared_ptr<IMessage> msg);
+	void enqueueFromHub(
+		Timestamp sendTime,
+		std::shared_ptr<IMessage> msg);
 
-        void enqueueFromStation(
-                int stationID,
-                Timestamp sendTime,
-                std::shared_ptr<IMessage> msg);
+	void enqueueFromStation(
+		StationID stationID,
+		Timestamp sendTime,
+		std::shared_ptr<IMessage> msg);
 
-        int _rttSlots;
+	int _rttSlots;
 
-        std::shared_ptr<IStarHub> _hub;
+	std::shared_ptr<IStarHub> _hub;
 
-        std::vector<std::shared_ptr<IStarStation>> _stations;
+	std::vector<std::shared_ptr<IStarStation>> _stations;
 
-        std::multimap<Timestamp, QueuedMessage> _queue;
+	std::multimap<Timestamp, QueuedMessage> _queue;
 
-        std::map<StationID, StateCounter> _stationStats;
+	std::map<StationID, StateCounter> _stationStats;
 };
 
 } // namespace starTopologyEmulator

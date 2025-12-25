@@ -12,14 +12,14 @@ namespace starTopologyEmulator
 class STAR_TOPOLOGY_EMULATOR_LIB_EXPORT StarHubAccessMessage : public IMessage
 {
 public:
-    StarHubAccessMessage(StationID id) : _stationID(id)
-    {}
+	StarHubAccessMessage(StationID id) : _stationID(id)
+	{}
 
-    MessageType type() const override { return MessageType::StarHubAccess; }
+	MessageType type() const override { return MessageType::StarHubAccess; }
 
-    StationID stationID() const { return _stationID; }
+	StationID stationID() const { return _stationID; }
 private:
-    StationID _stationID = 0;
+	StationID _stationID = 0;
 };
 
 } // namespace starTopologyEmulator
