@@ -1,0 +1,28 @@
+cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(TARGET StarTopologyEmulator)
+	return()
+endif()
+
+project(StarTopologyEmulator LANGUAGES CXX)
+
+file(GLOB_RECURSE SRC_FILES
+	${CMAKE_CURRENT_SOURCE_DIR}/Include/*.h
+	${CMAKE_CURRENT_SOURCE_DIR}/Src/*.h
+	${CMAKE_CURRENT_SOURCE_DIR}/Src/*.cpp)
+
+add_library(${PROJECT_NAME} STATIC ${SRC_FILES})
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE STAR_TOPOLOGY_EMULATOR_LIBRARY)
+target_compile_definitions(${PROJECT_NAME} PUBLIC STAR_TOPOLOGY_EMULATOR_LIBRARY_STATIC)
+
+target_include_directories(${PROJECT_NAME}
+	PUBLIC Include/
+	PRIVATE Src/)
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC_FILES})
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
+
