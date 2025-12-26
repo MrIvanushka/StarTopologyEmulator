@@ -1,16 +1,13 @@
-#include "StarTopologyEmulator/StarHubFactory.h"
+#include "StarTopologyEmulator/StarHubStrategyFactory.h"
 
-#include "Stations/StarHub.h"
+#include "Strategies/SimpleStarHubStrategy.h"
 
 namespace starTopologyEmulator
 {
 
-std::shared_ptr<IStarHub> StarHubFactory::make(
-	std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
-	const std::vector<StationID>& stations,
-	std::unique_ptr<IStarHubStrategy> strategy)
+std::unique_ptr<IStarHubStrategy> StarHubStrategyFactory::make()
 {
-	return std::make_shared<StarHub>(sendFunc, stations, std::move(strategy));
+	return std::make_unique<SimpleStarHubStrategy>();
 }
 
 } // namespace starTopologyEmulator
