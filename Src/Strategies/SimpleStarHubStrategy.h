@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
 #include "StarTopologyEmulator/StarHubStrategyConfig.h"
 
@@ -11,7 +13,7 @@ class SimpleStarHubStrategy : public IStarHubStrategy
 public:
 	using Config = StarHubStrategyConfig;
 
-	SimpleStarHubStrategy(const Config&& config) : _cfg(std::move(config))
+	SimpleStarHubStrategy(Config config) : _cfg(std::move(config))
 	{ }
 
 	StarHubPlanMessage generate(double g, double plr) override;

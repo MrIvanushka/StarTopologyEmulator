@@ -40,7 +40,7 @@ StarHubPlanMessage SimpleStarHubStrategy::generate(double g, double plr)
 int SimpleStarHubStrategy::calculateRaSlots(double g, double plr) {
         // Логика: если много коллизий (PLR), нужно физически больше места для RA
         double raScale = (g > 0.1) ? (g + plr) : 0.1;
-        int targetRa = static_cast<int>(_cfg.totalSlots * 0.2 * raScale);
+        auto targetRa = static_cast<std::uint8_t>(_cfg.totalSlots * 0.2 * raScale);
         return std::clamp(targetRa, _cfg.minRaSlots, _cfg.maxRaSlots);
 }
 

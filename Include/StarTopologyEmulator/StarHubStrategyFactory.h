@@ -11,7 +11,7 @@ namespace starTopologyEmulator
 class STAR_TOPOLOGY_EMULATOR_LIB_EXPORT StarHubStrategyFactory
 {
 public:
-    static std::unique_ptr<IStarHubStrategy> make(const StarHubStrategyConfig&&);
+    static std::unique_ptr<IStarHubStrategy> make(StarHubStrategyConfig);
 };
 
 } // namespace starTopologyEmulator

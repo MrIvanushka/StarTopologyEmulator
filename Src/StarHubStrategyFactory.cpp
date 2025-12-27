@@ -5,7 +5,7 @@
 namespace starTopologyEmulator
 {
 
-std::unique_ptr<IStarHubStrategy> StarHubStrategyFactory::make(const StarHubStrategyConfig&& config)
+std::unique_ptr<IStarHubStrategy> StarHubStrategyFactory::make(StarHubStrategyConfig config)
 {
 	return std::make_unique<SimpleStarHubStrategy>(std::move(config));
 }
