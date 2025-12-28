@@ -21,6 +21,8 @@ Emulator::Emulator(
 	}
 
 	_hub = hubFactory(makeHubSendFunc(), abonentIDs);
+
+	REGISTER_METRIC_SUBFOLDER(_hub.get());
 }
 
 std::function<void(Emulator::Timestamp, std::shared_ptr<IMessage>)> Emulator::makeHubSendFunc()

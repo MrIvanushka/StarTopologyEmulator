@@ -24,15 +24,15 @@ struct StationContext
 	std::shared_ptr<StarHubPlanMessage> plan;
 
 	bool waitingForAck = false;
-	ITerminal::Timestamp lastSendTime = 0;
-	ITerminal::Timestamp ackTimeout = 0;  // в слотах
+	Timestamp lastSendTime = 0;
+	Timestamp ackTimeout = 0;  // в слотах
 
-	ITerminal::Timestamp now = 0;
+	Timestamp now = 0;
 
 	std::mt19937* rng = nullptr;
-	std::function<void(ITerminal::Timestamp, std::shared_ptr<IMessage>)> sendFunc;
+	std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc;
 
-	std::optional<ITerminal::Timestamp> joinedTime;
+	std::optional<Timestamp> joinedTime;
 };
 
 } // namespace starTopologyEmulator

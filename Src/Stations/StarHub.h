@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 
+#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
 #include "StarTopologyEmulator/IFaces/IStarHub.h"
 #include "StarTopologyEmulator/Messages/StarStationMessage.h"
@@ -13,6 +14,7 @@ namespace starTopologyEmulator
 
 class StarHub : public IStarHub
 {
+	DECLARE_METRICS("Центральная станция")
 public:
 	StarHub(
 		std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,

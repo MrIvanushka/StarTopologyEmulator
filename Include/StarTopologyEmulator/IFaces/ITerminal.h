@@ -4,17 +4,14 @@
 #include <memory>
 
 #include "StarTopologyEmulator/IFaces/IMessage.h"
+#include "StarTopologyEmulator/IFaces/IMetricProducer.h"
 
 namespace starTopologyEmulator
 {
 
-class ITerminal
+class ITerminal : public IMetricProducer
 {
 public:
-	using Timestamp = std::uint64_t;
-
-	virtual ~ITerminal() = default;
-
 	virtual void update(Timestamp) = 0;
 
 	virtual void handleMessage(std::shared_ptr<IMessage>, Timestamp) = 0;

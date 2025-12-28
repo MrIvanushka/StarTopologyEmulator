@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 
+#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IEmulator.h"
 #include "StarTopologyEmulator/IFaces/IStarHub.h"
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
@@ -14,6 +15,7 @@ namespace starTopologyEmulator
 
 class Emulator : public IEmulator
 {
+	DECLARE_METRICS("Эмулятор СЛС")
 public:
 	using SendFunc = std::function<void(Timestamp, std::shared_ptr<IMessage>)>;
 	using RTT = int;

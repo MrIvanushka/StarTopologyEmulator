@@ -63,7 +63,7 @@ TerminalState StarStation::currentState() const
 	return static_cast<TerminalState>(_stateMachine->currentStateIndex());
 }
 
-std::optional<StarStation::Timestamp> StarStation::joinedTime() const
+std::optional<Timestamp> StarStation::joinedTime() const
 {
 	return _context->joinedTime
 		? std::optional<int>(static_cast<int>(*_context->joinedTime))

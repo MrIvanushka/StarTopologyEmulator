@@ -11,7 +11,7 @@
 namespace starTopologyEmulator
 {
 
-class IEmulator
+class IEmulator : public IMetricProducer
 {
 public:
 	using Timestamp = std::uint64_t;

@@ -1,15 +1,14 @@
 #pragma once
 
+#include "StarTopologyEmulator/IFaces/IMetricProducer.h"
 #include "StarTopologyEmulator/Messages/StarHubPlanMessage.h"
 
 namespace starTopologyEmulator
 {
 
-class IStarHubStrategy
+class IStarHubStrategy : public IMetricProducer
 {
 public:
-	virtual ~IStarHubStrategy() = default;
-
 	virtual StarHubPlanMessage generate(double g, double plr) = 0;
 };
 

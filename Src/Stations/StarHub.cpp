@@ -16,6 +16,14 @@ StarHub::StarHub(
 	, _totalSuccess(0)
 	, _totalCollisions(0)
 {
+	REGISTER_METRIC_SUBFOLDER(_strategy.get());
+	REGISTER_METRIC(incomeLoad(), "Входная нагрузка");
+	REGISTER_METRIC(incomePlr(), "PLR");
+	REGISTER_METRIC(_totalSlots, "Слотов принято");
+	REGISTER_METRIC(_totalAttempts, "Сообщений принято");
+	REGISTER_METRIC(_totalSuccess, "Сообщений принято без коллизий");
+	REGISTER_METRIC(_totalCollisions, "Общее число коллизий");
+	REGISTER_METRIC(_totalLost, "Общее число потерянных сообщений");
 }
 
 void StarHub::update(Timestamp currentTime)
