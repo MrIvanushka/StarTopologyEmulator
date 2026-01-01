@@ -1,4 +1,4 @@
-#include "StarTopologyEmulator/StarHubFactory.h"
+#include "StarTopologyEmulator/Stations/StarHubFactory.h"
 
 #include "Stations/StarHub.h"
 

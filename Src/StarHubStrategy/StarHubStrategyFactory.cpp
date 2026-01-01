@@ -1,6 +1,6 @@
-#include "StarTopologyEmulator/StarHubStrategyFactory.h"
+#include "StarTopologyEmulator/StarHubStrategy/StarHubStrategyFactory.h"
 
-#include "Strategies/SimpleStarHubStrategy.h"
+#include "StarHubStrategy/SimpleStarHubStrategy.h"
 
 namespace starTopologyEmulator
 {

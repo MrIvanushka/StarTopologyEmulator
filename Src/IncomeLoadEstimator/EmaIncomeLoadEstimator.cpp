@@ -6,8 +6,8 @@
 namespace starTopologyEmulator
 {
 
-EmaIncomeLoadEstimator::EmaIncomeLoadEstimator(const Config& config)
-	: _cfg(config)
+EmaIncomeLoadEstimator::EmaIncomeLoadEstimator(EmaIncomeLoadEstimatorConfig config)
+	: _cfg(std::move(config))
 {
 	REGISTER_METRIC(_smoothedG, "ќценка входной нагрузки");
 	REGISTER_METRIC(_smoothedPlr, "ќценка PLR");

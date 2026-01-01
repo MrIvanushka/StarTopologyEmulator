@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
-#include "StarTopologyEmulator/StarHubStrategyConfig.h"
+#include "StarTopologyEmulator/StarHubStrategy/StarHubStrategyConfig.h"
 
 namespace starTopologyEmulator
 {

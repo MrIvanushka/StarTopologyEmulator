@@ -4,6 +4,8 @@
 
 #include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
+#include "StarTopologyEmulator/IncomeLoadEstimator/KalmanIncomeLoadEstimatorConfig.h"
+
 
 namespace starTopologyEmulator
 {
@@ -12,19 +14,7 @@ class KalmanIncomeLoadEstimator : public IIncomeLoadEstimator
 {
 	DECLARE_METRICS("Оценка входной нагрузки (фильтр Калмана)")
 public:
-	struct Config
-	{
-		// Шум процесса: как сильно истинное значение может измениться за 1 кадр
-		double qG = 0.001;   
-		double qPlr = 0.001;
-
-		// Базовый шум измерения: ошибка при расчете по 1 слоту
-		double rBase = 0.5; 
-
-		double collisionWeight = 2.39;
-	};
-
-	explicit KalmanIncomeLoadEstimator(const Config& config);
+	explicit KalmanIncomeLoadEstimator(KalmanIncomeLoadEstimatorConfig);
 
 	void update(const RandomAccessFrameResult& result) override;
 
@@ -47,7 +37,7 @@ private:
 
 	double calculateInstantPlr(const RandomAccessFrameResult& res) const;
 
-	Config _cfg;
+	KalmanIncomeLoadEstimatorConfig _cfg;
 	KalmanState _stateG{0.0, 1.0};
 	KalmanState _statePlr{0.0, 1.0};
 };

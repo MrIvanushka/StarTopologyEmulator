@@ -6,8 +6,8 @@
 namespace starTopologyEmulator
 {
 
-KalmanIncomeLoadEstimator::KalmanIncomeLoadEstimator(const Config& config)
-: _cfg(config)
+KalmanIncomeLoadEstimator::KalmanIncomeLoadEstimator(KalmanIncomeLoadEstimatorConfig config)
+: _cfg(std::move(config))
 {
         REGISTER_METRIC(_stateG.value, "Оценка входной нагрузки");
         REGISTER_METRIC(_stateG.error, "Априорная ошибка оценки входной нагрузки");
