@@ -1,28 +1,25 @@
 #include "Emulator.h"
 
+#include "StarTopologyEmulator/Messages/CollisionReport.h"
 #include "StarTopologyEmulator/Messages/StarHubAccessMessage.h"
 
 namespace starTopologyEmulator
 {
 
 Emulator::Emulator(
-	std::function<std::shared_ptr<IStarStation>(SendFunc, StationID, RTT)> stationFactory,
-	std::function<std::shared_ptr<IStarHub>(SendFunc, const std::vector<StationID>&)> hubFactory,
-	int stationCount, int rttSlots)
-	: _rttSlots(rttSlots)
+	std::function<std::shared_ptr<IStarStation>(SendFunc, StationID)> stationFactory,
+	std::function<std::shared_ptr<IStarHub>(SendFunc)> hubFactory,
+	int stationCount)
 {
-	std::vector<StationID> abonentIDs(stationCount);
 	_stations.resize(stationCount);
 
 	for (auto i = 0u; i < stationCount; ++i)
-	{
-		_stations[i] = stationFactory(makeStationSendFunc(i), i, _rttSlots);
-		abonentIDs[i] = i;
-	}
+		_stations[i] = stationFactory(makeStationSendFunc(i), i);
 
-	_hub = hubFactory(makeHubSendFunc(), abonentIDs);
+	_hub = hubFactory(makeHubSendFunc());
 
 	REGISTER_METRIC_SUBFOLDER(_hub.get());
+	REGISTER_METRIC(joinedStationsCount(), "Количество вошедших в сеть станций");
 }
 
 std::function<void(Emulator::Timestamp, std::shared_ptr<IMessage>)> Emulator::makeHubSendFunc()
@@ -45,67 +42,28 @@ const std::vector<std::shared_ptr<IStarStation>>& Emulator::stations() const
 	return _stations;
 }
 
-void Emulator::update(Timestamp currentTime)
+void Emulator::update(Timestamp now)
 {
-	auto range = _queue.equal_range(currentTime);
-	for (auto it = range.first; it != range.second; ++it)
-	{
-		const QueuedMessage& queuedMessage = it->second;
-		if (queuedMessage.direction == Direction::ToHub)
-		{
-			if(_hub)
-				_hub->handleMessage(queuedMessage.msg, currentTime);
-		}
-		else
-		{
-			for (auto& station : _stations)
-			{
-				if (station->id() == queuedMessage.stationID)
-				{
-					station->handleMessage(queuedMessage.msg, currentTime);
-					break;
-				}
-			}
-		}
-	}
-	_queue.erase(range.first, range.second);
+	std::vector<QueuedMessage> releasedMessages;
 
-	for (auto& station : _stations)
+	while (!_queue.empty() && _queue.begin()->first <= now)
 	{
-		TerminalState state = station->currentState();
-		_stationStats[station->id()][state]++;
+		releasedMessages.push_back(std::move(_queue.begin()->second));
+		_queue.erase(_queue.begin());
 	}
-}
 
-const std::map<StationID, Emulator::StateCounter>& Emulator::stationStats() const
-{
-	return _stationStats;
+	updateDownlink(now, releasedMessages);
+	updateUplink(now, releasedMessages);
 }
 
 void Emulator::enqueueFromHub(Timestamp sendTime, std::shared_ptr<IMessage> msg)
 {
-	if (!msg)
-		return;
-
-	if (msg->type() == MessageType::StarHubPlan)
+	for (auto station : _stations)
 	{
-		for (auto& station : _stations)
-		{
-			QueuedMessage queuedMessage;
-			queuedMessage.deliveryTime = sendTime + _rttSlots;
-			queuedMessage.direction = Direction::ToStation;
-			queuedMessage.stationID = station->id();
-			queuedMessage.msg = msg;
-			_queue.emplace(queuedMessage.deliveryTime, queuedMessage);
-		}
-	}
-	else if (msg->type() == MessageType::StarHubAccess)
-	{
-		auto ack = std::static_pointer_cast<StarHubAccessMessage>(msg);
 		QueuedMessage queuedMessage;
-		queuedMessage.deliveryTime = sendTime + _rttSlots;
+		queuedMessage.deliveryTime = sendTime + _hub->tts() + station->tts();
 		queuedMessage.direction = Direction::ToStation;
-		queuedMessage.stationID = ack->stationID();
+		queuedMessage.stationID = station->id();
 		queuedMessage.msg = msg;
 		_queue.emplace(queuedMessage.deliveryTime, queuedMessage);
 	}
@@ -116,15 +74,58 @@ void Emulator::enqueueFromStation(
 	Timestamp sendTime,
 	std::shared_ptr<IMessage> msg)
 {
-	if (!msg)
-		return;
-
 	QueuedMessage queuedMessage;
-	queuedMessage.deliveryTime = sendTime + _rttSlots;
+	queuedMessage.deliveryTime = sendTime + _stations[stationID]->tts() + _hub->tts();
 	queuedMessage.direction = Direction::ToHub;
 	queuedMessage.stationID = stationID;
 	queuedMessage.msg = msg;
-	_queue.emplace(queuedMessage.deliveryTime, queuedMessage);
+
+	auto deliveryFrameSlot = _frameCalculator->frameMoment(queuedMessage.deliveryTime);
+	auto deliverySlotBegin = _frameCalculator->slotBeginTime(deliveryFrameSlot.frameNumber, deliveryFrameSlot.slotNumber);
+	_queue.emplace(deliverySlotBegin, queuedMessage);
+}
+
+void Emulator::updateDownlink(Timestamp now, const std::vector<QueuedMessage>& releasedMessages)
+{
+	for (const auto& message : releasedMessages)
+	{
+		if (message.direction != Direction::ToStation)
+			continue;
+
+		auto station = _stations[message.stationID];
+		if (station)
+			station->handleMessage(message.msg, now);
+	}
+}
+
+void Emulator::updateUplink(Timestamp now, const std::vector<QueuedMessage>& releasedMessages)
+{
+	Timestamp deliveryTime = 0;
+	std::map<Timestamp, std::vector<std::shared_ptr<IMessage>>> msgs;
+
+	for (auto& message : releasedMessages)
+	{
+		if (message.direction != Direction::ToHub)
+			continue;
+
+		msgs[message.deliveryTime].push_back(message.msg);
+	}
+	for (auto pair : msgs)
+	{
+		if (pair.second.size() == 1)
+			_hub->handleMessage(pair.second[0], pair.first);
+		else if (msgs.size() > 1)
+			_hub->handleMessage(std::make_shared<CollisionReport>(), pair.first);
+	}
+}
+
+std::uint32_t Emulator::joinedStationsCount() const
+{
+	std::uint32_t ret = 0;
+	for (auto& station : _stations)
+		if (station && station->joinedTime().has_value())
+			++ret;
+	return ret;
 }
 
 } // namespace starTopologyEmulator

@@ -17,7 +17,7 @@ public:
 
 	SimpleStarHubStrategy(Config config);
 
-	StarHubPlanMessage generate(double g, double plr) override;
+	std::shared_ptr<StarHubPlanMessage> generate(double g, double plr) override;
 
 private:
 	int calculateRaSlots(double g, double plr);

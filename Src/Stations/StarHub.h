@@ -4,6 +4,8 @@
 #include <map>
 
 #include "Metrics/Metrics.h"
+#include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
+#include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
 #include "StarTopologyEmulator/IFaces/IStarHub.h"
 #include "StarTopologyEmulator/Messages/StarStationMessage.h"
@@ -18,34 +20,34 @@ class StarHub : public IStarHub
 public:
 	StarHub(
 		std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
-		const std::vector<StationID>& terminalIDs,
-		std::unique_ptr<IStarHubStrategy> strategy);
+		std::unique_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
+		std::unique_ptr<IFrameCalculator> frameCalculator,
+		std::unique_ptr<IStarHubStrategy> strategy,
+		Timestamp tts);
 
 	void update(Timestamp currentTime) override;
 
 	void handleMessage(std::shared_ptr<IMessage>, Timestamp) override;
 
-	double incomeLoad() const override;
+	Timestamp tts() const override;
+private:
+	void onFrameEnd(std::uint64_t frameNumber);
 
-	double incomePlr() const override;
-
-	std::uint64_t getTotalSuccess() const override;
-
-	std::uint64_t getTotalCollisions() const override;
-
+	void sendAnswersToStations(Timestamp);
 private:
 	std::function<void(Timestamp, std::shared_ptr<IMessage>)> _sendFunc;
-	std::vector<StationID> _terminalIDs;
+	
+	std::unique_ptr<IIncomeLoadEstimator> _incomeLoadEstimator;
+	std::unique_ptr<IFrameCalculator> _frameCalculator;
 	std::unique_ptr<IStarHubStrategy> _strategy;
 
-	std::map<Timestamp, std::vector<std::shared_ptr<IMessage>>> _pending;
+	Timestamp _tts;
 
-	std::uint64_t _totalSlots;
-	std::uint64_t _totalAttempts;
-	std::uint64_t _totalLost;
-	std::uint64_t _totalSuccess;
-	std::uint64_t _totalCollisions;
+	std::vector<StationID> _pendingAnswers;
+
+	std::shared_ptr<StarHubPlanMessage> _currentPlan;
+	RandomAccessFrameResult _frameAccumulator;
+	std::uint64_t _lastProcessedFrame = 0;
 };
 
 } // namespace starTopologyEmulator
-

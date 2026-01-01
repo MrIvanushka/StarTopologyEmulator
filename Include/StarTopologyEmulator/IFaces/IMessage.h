@@ -7,7 +7,8 @@ enum class MessageType
 {
 	StarHubAccess,
 	StarHubPlan,
-	StarStation
+	StarStation,
+	CollisionReport
 };
 
 class IMessage

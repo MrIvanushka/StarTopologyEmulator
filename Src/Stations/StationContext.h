@@ -6,7 +6,7 @@
 #include <random>
 
 #include "StarTopologyEmulator/CommonTypedefs.h"
-#include "StarTopologyEmulator/IFaces/ITerminal.h"
+#include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/Messages/StarHubPlanMessage.h"
 
 namespace starTopologyEmulator
@@ -14,6 +14,8 @@ namespace starTopologyEmulator
 
 struct StationContext
 {
+	std::unique_ptr<IFrameCalculator> frameCalculator;
+
 	StationID id = 0;
 
 	int messagesNeeded = 0;
@@ -25,7 +27,7 @@ struct StationContext
 
 	bool waitingForAck = false;
 	Timestamp lastSendTime = 0;
-	Timestamp ackTimeout = 0;  // в слотах
+	Timestamp ackTimeout = 0;
 
 	Timestamp now = 0;
 

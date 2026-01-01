@@ -16,12 +16,10 @@ namespace starTopologyEmulator
 struct STAR_TOPOLOGY_EMULATOR_LIB_EXPORT EmulatorInitData
 {
 	using SendFunc = std::function<void(Timestamp, std::shared_ptr<IMessage>)>;
-	using RTT = int;
 
-	std::function<std::shared_ptr<IStarStation>(SendFunc, StationID, RTT)> stationFactory;
-	std::function<std::shared_ptr<IStarHub>(SendFunc, const std::vector<StationID>&)> hubFactory;
+	std::function<std::shared_ptr<IStarStation>(SendFunc, StationID)> stationFactory;
+	std::function<std::shared_ptr<IStarHub>(SendFunc)> hubFactory;
 	int stationCount = 10;
-	int rttSlots = 100;
 };
 
 class STAR_TOPOLOGY_EMULATOR_LIB_EXPORT EmulatorFactory

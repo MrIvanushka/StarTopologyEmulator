@@ -5,96 +5,76 @@ namespace starTopologyEmulator
 
 StarHub::StarHub(
 	std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
-	const std::vector<StationID>& terminalIDs,
-	std::unique_ptr<IStarHubStrategy> strategy)
+	std::unique_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
+	std::unique_ptr<IFrameCalculator> frameCalculator,
+	std::unique_ptr<IStarHubStrategy> strategy,
+	Timestamp tts)
 	: _sendFunc(std::move(sendFunc))
-	, _terminalIDs(terminalIDs)
+	, _incomeLoadEstimator(std::move(incomeLoadEstimator))
+	, _frameCalculator(std::move(frameCalculator))
 	, _strategy(std::move(strategy))
-	, _totalSlots(0)
-	, _totalAttempts(0)
-	, _totalLost(0)
-	, _totalSuccess(0)
-	, _totalCollisions(0)
+	, _tts(tts)
 {
 	REGISTER_METRIC_SUBFOLDER(_strategy.get());
-	REGISTER_METRIC(incomeLoad(), "Входная нагрузка");
-	REGISTER_METRIC(incomePlr(), "PLR");
-	REGISTER_METRIC(_totalSlots, "Слотов принято");
-	REGISTER_METRIC(_totalAttempts, "Сообщений принято");
-	REGISTER_METRIC(_totalSuccess, "Сообщений принято без коллизий");
-	REGISTER_METRIC(_totalCollisions, "Общее число коллизий");
-	REGISTER_METRIC(_totalLost, "Общее число потерянных сообщений");
+	REGISTER_METRIC_SUBFOLDER(_incomeLoadEstimator.get());
 }
 
 void StarHub::update(Timestamp currentTime)
 {
-	auto it = _pending.find(currentTime);
+	FrameMoment moment = _frameCalculator->frameMoment(currentTime);
 
-	if (it == _pending.end())
+	if (moment.frameNumber > _lastProcessedFrame)
 	{
-		++_totalSlots;
+		onFrameEnd(_lastProcessedFrame);
+		_lastProcessedFrame = moment.frameNumber;
 	}
-	else
-	{
-		std::vector<std::shared_ptr<IMessage>> msgs = std::move(it->second);
-		_pending.erase(it);
+}
 
-		++_totalSlots;
-		std::size_t attempts = msgs.size();
-		_totalAttempts += attempts;
+void StarHub::handleMessage(std::shared_ptr<IMessage> msg, Timestamp arrivalTime)
+{
+	FrameMoment handleMoment = _frameCalculator->frameMoment(arrivalTime);
 
-		if (attempts == 1)
-		{
-			++_totalSuccess;
-			auto raMsg = std::static_pointer_cast<StarStationMessage>(msgs[0]);
-			int stId = raMsg->stationID();
-			auto ack = std::make_shared<StarHubAccessMessage>(stId);
-			_sendFunc(currentTime, ack);
+	if (handleMoment.frameNumber != _lastProcessedFrame)
+		return;
+
+	if (handleMoment.slotNumber < _currentPlan->randomAccessSlotsCountInFrame()) {
+
+		if (msg->type() == MessageType::StarStation) {
+			_frameAccumulator.successSlots++;
 		}
-		else
-		{
-			++_totalCollisions;
-			_totalLost += attempts;
+		else if (msg->type() == MessageType::CollisionReport) {
+			_frameAccumulator.collisionSlots++;
 		}
 	}
-	if (_strategy)
+}
+
+Timestamp StarHub::tts() const
+{
+	return _tts;
+}
+
+void StarHub::onFrameEnd(std::uint64_t frameNumber)
+{
+	_frameAccumulator.totalRaSlots = _currentPlan->randomAccessSlotsCountInFrame();
+
+	_incomeLoadEstimator->update(_frameAccumulator);
+
+	auto g = _incomeLoadEstimator->incomeLoad();
+	auto plr = _incomeLoadEstimator->plr();
+
+	_currentPlan = _strategy->generate(g, plr);
+
+	_sendFunc(_frameCalculator->slotBeginTime(frameNumber + 1, 0), _currentPlan);
+	_frameAccumulator = RandomAccessFrameResult();
+}
+
+void StarHub::sendAnswersToStations(Timestamp sendTime)
+{
+	for (auto id : _pendingAnswers)
 	{
-		double g = incomeLoad();
-		double plr = incomePlr();
-
-		StarHubPlanMessage plan = _strategy->generate(g, plr);
-		auto planPtr = std::make_shared<StarHubPlanMessage>(plan);
-		_sendFunc(currentTime, planPtr);
+		_sendFunc(sendTime, std::make_shared<StarHubAccessMessage>(id));
 	}
-}
-
-void StarHub::handleMessage(std::shared_ptr<IMessage> msg, Timestamp timestamp)
-{
-	_pending[timestamp].push_back(std::move(msg));
-}
-
-double StarHub::incomeLoad() const
-{
-	return (_totalSlots > 0)
-		? static_cast<double>(_totalAttempts) / _totalSlots
-		: 0.0;
-}
-
-double StarHub::incomePlr() const
-{
-	return (_totalAttempts > 0)
-		? static_cast<double>(_totalLost) / _totalAttempts
-		: 0.0;
-}
-
-std::uint64_t StarHub::getTotalSuccess() const
-{
-	return _totalSuccess;
-}
-
-std::uint64_t StarHub::getTotalCollisions() const
-{
-	return _totalCollisions;
+	_pendingAnswers.clear();
 }
 
 } // namespace starTopologyEmulator

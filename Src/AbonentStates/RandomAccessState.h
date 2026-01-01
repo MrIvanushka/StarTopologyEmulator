@@ -18,9 +18,16 @@ public:
 private:
 	void onUpdate() override;
 
-	int computeWindow() const;
+	void handleCollision();
+
+	void implementBackoffLogic();
+
+	void transmit();
 
 	std::shared_ptr<StationContext> _context;
+
+	std::uint64_t _lastProcessedFrame = 0;
+	std::uint64_t _lastProcessedSlot = 0;
 };
 
 } // namespace starTopologyEmulator

@@ -15,27 +15,30 @@ class StarStation : public IStarStation
 public:
 	StarStation(
 		std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
+		std::unique_ptr<IFrameCalculator> frameCalculator,
 		StationID id,
 		int messagesNeeded,
-		int rttSlots,
+		Timestamp tts,
 		std::mt19937& rng);
 
 	void update(Timestamp currentTime) override;
 
 	void handleMessage(std::shared_ptr<IMessage>, Timestamp) override;
 
-	TerminalState currentState() const;
+	Timestamp tts() const override;
 
-	std::optional<Timestamp> joinedTime() const;
+	TerminalState currentState() const override;
 
-	StationID id() const;
+	std::optional<Timestamp> joinedTime() const override;
+
+	StationID id() const override;
 
 private:
 	void buildStateMachine();
 
 	std::shared_ptr<StationContext> _context;
 	std::unique_ptr<StateMachine> _stateMachine;
-	int _rttSlots;
+	Timestamp _tts;
 	std::mt19937& _rng;
 };
 

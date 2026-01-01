@@ -11,18 +11,20 @@ namespace starTopologyEmulator
 
 StarStation::StarStation(
 	std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
+	std::unique_ptr<IFrameCalculator> frameCalculator,
 	StationID id,
 	int messagesNeeded,
-	int rttSlots,
+	Timestamp tts,
 	std::mt19937& rng)
-	: _rttSlots(rttSlots)
+	: _tts(tts)
 	, _rng(rng)
 {
 	_context = std::make_shared<StationContext>();
 
 	_context->id = id;
+	_context->frameCalculator = std::move(frameCalculator);
 	_context->messagesNeeded = messagesNeeded;
-	_context->ackTimeout = 2 * rttSlots;
+	_context->ackTimeout = 5 * tts;
 	_context->rng = &_rng;
 	_context->sendFunc = std::move(sendFunc);
 
@@ -56,6 +58,11 @@ void StarStation::handleMessage(std::shared_ptr<IMessage> msg, Timestamp timesta
 			++_context->messagesDelivered;
 		}
 	}
+}
+
+Timestamp StarStation::tts() const
+{
+	return _tts;
 }
 
 TerminalState StarStation::currentState() const

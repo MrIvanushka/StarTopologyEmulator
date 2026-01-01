@@ -15,6 +15,8 @@ public:
 	virtual void update(Timestamp) = 0;
 
 	virtual void handleMessage(std::shared_ptr<IMessage>, Timestamp) = 0;
+
+	virtual Timestamp tts() const = 0;
 };
 
 } // namespace starTopologyEmulator
