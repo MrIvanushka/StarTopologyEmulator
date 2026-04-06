@@ -21,11 +21,13 @@ public:
 	};
 public:
 	StarHubPlanMessage(
+		std::uint64_t frame,
 		std::uint8_t onlineSlots,
 		std::uint8_t yellowSlots,
 		std::uint8_t raSlots,
 		const BackoffConfig& cfg)
-		: _onlineSlotsCountInFrame(onlineSlots)
+		: _frame(frame)
+		, _onlineSlotsCountInFrame(onlineSlots)
 		, _yellowSlotsCountInFrame(yellowSlots)
 		, _randomAccessSlotsCountInFrame(raSlots)
 		, _backoff(cfg)
@@ -33,12 +35,14 @@ public:
 
 	MessageType type() const override { return MessageType::StarHubPlan; }
 
-	std::uint8_t onlineSlotsCountInFrame() { return _onlineSlotsCountInFrame; }
-	std::uint8_t yellowSlotsCountInFrame() { return _yellowSlotsCountInFrame; }
+	std::uint64_t frame() const { return _frame; }
 
+	std::uint8_t onlineSlotsCountInFrame() const { return _onlineSlotsCountInFrame; }
+	std::uint8_t yellowSlotsCountInFrame() const { return _yellowSlotsCountInFrame; }
 	std::uint8_t randomAccessSlotsCountInFrame() const { return _randomAccessSlotsCountInFrame; }
 	BackoffConfig backoff() const { return _backoff; }
 private:
+	std::uint64_t _frame;
 	std::uint8_t _onlineSlotsCountInFrame;
 	std::uint8_t _yellowSlotsCountInFrame;
 	std::uint8_t _randomAccessSlotsCountInFrame;

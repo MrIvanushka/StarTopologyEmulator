@@ -13,7 +13,7 @@ JoinTransition::JoinTransition(
 
 bool JoinTransition::needTransit()
 {
-	if (_context->messagesDelivered >= _context->messagesNeeded && !_context->joinedTime.has_value())
+	if (_context->messagesDelivered >= _context->messagesNeeded)
 	{
 		_context->joinedTime = _context->now;
 		return true;

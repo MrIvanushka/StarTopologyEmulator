@@ -18,9 +18,9 @@ public:
 private:
 	void onUpdate() override;
 
-	void handleCollision();
+	void handleCollision(std::shared_ptr<StarHubPlanMessage>);
 
-	void implementBackoffLogic();
+	void implementBackoffLogic(std::shared_ptr<StarHubPlanMessage>);
 
 	void transmit();
 

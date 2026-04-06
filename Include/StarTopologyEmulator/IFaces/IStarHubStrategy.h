@@ -11,7 +11,7 @@ namespace starTopologyEmulator
 class IStarHubStrategy : public IMetricProducer
 {
 public:
-	virtual std::shared_ptr<StarHubPlanMessage> generate(double g, double plr) = 0;
+	virtual std::shared_ptr<StarHubPlanMessage> generate(std::uint64_t frame, double g, double plr) = 0;
 };
 
 } // namespace starTopologyEmulator

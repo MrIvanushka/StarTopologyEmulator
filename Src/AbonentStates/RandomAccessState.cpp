@@ -15,12 +15,14 @@ RandomAccessState::RandomAccessState(
 
 void RandomAccessState::onUpdate()
 {
-	if (!_context->plan)
-		return;
-
 	auto moment = _context->frameCalculator->frameMoment(_context->now);
 
 	if (moment.frameNumber == _lastProcessedFrame && moment.slotNumber == _lastProcessedSlot)
+		return;
+
+	auto plan = _context->dynamicFrameSettings->currentPlan(moment.frameNumber);
+
+	if (!plan)
 		return;
 
 	_lastProcessedFrame = moment.frameNumber;
@@ -29,22 +31,22 @@ void RandomAccessState::onUpdate()
 	if (_context->waitingForAck)
 	{
 		if (_context->now - _context->lastSendTime >= _context->ackTimeout)
-			handleCollision();
+			handleCollision(plan);
 		return;
 	}
-	if (moment.slotNumber >= _context->plan->randomAccessSlotsCountInFrame())
+	if (moment.slotNumber >= plan->randomAccessSlotsCountInFrame())
 	{
 		return;
 	}
-	implementBackoffLogic();
+	implementBackoffLogic(plan);
 }
 
-void RandomAccessState::handleCollision()
+void RandomAccessState::handleCollision(std::shared_ptr<StarHubPlanMessage> plan)
 {
 	_context->waitingForAck = false;
 	_context->attempts++;
 
-	const auto& cfg = _context->plan->backoff();
+	const auto& cfg = plan->backoff();
 
 	double windowSize = cfg.baseWindow;
 	if (cfg.useExponential)
@@ -57,7 +59,7 @@ void RandomAccessState::handleCollision()
 	_context->backoffRemaining = dist(*_context->rng);
 }
 
-void RandomAccessState::implementBackoffLogic()
+void RandomAccessState::implementBackoffLogic(std::shared_ptr<StarHubPlanMessage> plan)
 {
 	if (_context->backoffRemaining > 0)
 	{
@@ -66,7 +68,7 @@ void RandomAccessState::implementBackoffLogic()
 	}
 	std::uniform_real_distribution<double> dist(0.0, 1.0);
 
-	if (dist(*_context->rng) > _context->plan->backoff().pTx)
+	if (dist(*_context->rng) > plan->backoff().pTx)
 		return;
 
 	transmit();

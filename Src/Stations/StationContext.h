@@ -6,6 +6,7 @@
 #include <random>
 
 #include "StarTopologyEmulator/CommonTypedefs.h"
+#include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/Messages/StarHubPlanMessage.h"
 
@@ -15,6 +16,7 @@ namespace starTopologyEmulator
 struct StationContext
 {
 	std::unique_ptr<IFrameCalculator> frameCalculator;
+	std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings;
 
 	StationID id = 0;
 
@@ -22,8 +24,6 @@ struct StationContext
 	int messagesDelivered = 0;
 	int attempts = 0;
 	int backoffRemaining = 0;
-
-	std::shared_ptr<StarHubPlanMessage> plan;
 
 	bool waitingForAck = false;
 	Timestamp lastSendTime = 0;

@@ -12,6 +12,7 @@ namespace starTopologyEmulator
 StarStation::StarStation(
 	std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
 	std::unique_ptr<IFrameCalculator> frameCalculator,
+	std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	StationID id,
 	int messagesNeeded,
 	Timestamp tts,
@@ -20,11 +21,11 @@ StarStation::StarStation(
 	, _rng(rng)
 {
 	_context = std::make_shared<StationContext>();
-
 	_context->id = id;
 	_context->frameCalculator = std::move(frameCalculator);
+	_context->dynamicFrameSettings = std::move(dynamicFrameSettings);
 	_context->messagesNeeded = messagesNeeded;
-	_context->ackTimeout = 5 * tts;
+	_context->ackTimeout = 6 * tts;
 	_context->rng = &_rng;
 	_context->sendFunc = std::move(sendFunc);
 
@@ -45,7 +46,7 @@ void StarStation::handleMessage(std::shared_ptr<IMessage> msg, Timestamp timesta
 	if (msg->type() == MessageType::StarHubPlan)
 	{
 		auto plan = std::static_pointer_cast<StarHubPlanMessage>(msg);
-		_context->plan = plan;
+		_context->dynamicFrameSettings->handlePlan(plan);
 	}
 	else if (msg->type() == MessageType::StarHubAccess)
 	{

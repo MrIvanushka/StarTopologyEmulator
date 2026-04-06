@@ -9,9 +9,11 @@ namespace starTopologyEmulator
 Emulator::Emulator(
 	std::function<std::shared_ptr<IStarStation>(SendFunc, StationID)> stationFactory,
 	std::function<std::shared_ptr<IStarHub>(SendFunc)> hubFactory,
+	std::unique_ptr<IFrameCalculator> frameCalculator,
 	int stationCount)
 {
 	_stations.resize(stationCount);
+	_frameCalculator = std::move(frameCalculator);
 
 	for (auto i = 0u; i < stationCount; ++i)
 		_stations[i] = stationFactory(makeStationSendFunc(i), i);
@@ -19,7 +21,11 @@ Emulator::Emulator(
 	_hub = hubFactory(makeHubSendFunc());
 
 	REGISTER_METRIC_SUBFOLDER(_hub.get());
-	REGISTER_METRIC(joinedStationsCount(), "Количество вошедших в сеть станций");
+	REGISTER_METRIC(stationsCountOnState(TerminalState::OPERATION), "Количество вошедших в сеть станций");
+	REGISTER_METRIC(stationsCountOnState(TerminalState::ACQUISITION), "Входящие станции");
+	REGISTER_METRIC(stationsCountOnState(TerminalState::OFF), "Остановленные станции");
+	REGISTER_METRIC(_previousFrameIncomeLoad, "Реальная входная нагрузка");
+	REGISTER_METRIC(_previousFramePlr, "Реальный PLR");
 }
 
 std::function<void(Emulator::Timestamp, std::shared_ptr<IMessage>)> Emulator::makeHubSendFunc()
@@ -44,6 +50,9 @@ const std::vector<std::shared_ptr<IStarStation>>& Emulator::stations() const
 
 void Emulator::update(Timestamp now)
 {
+	auto currentFrameMoment = _frameCalculator->frameMoment(now);
+	_uplinkSlotsWithTraffic = currentFrameMoment.frameNumber * _frameCalculator->frameConfig().slotCountInFrame + currentFrameMoment.slotNumber;
+
 	std::vector<QueuedMessage> releasedMessages;
 
 	while (!_queue.empty() && _queue.begin()->first <= now)
@@ -54,6 +63,12 @@ void Emulator::update(Timestamp now)
 
 	updateDownlink(now, releasedMessages);
 	updateUplink(now, releasedMessages);
+
+	if (currentFrameMoment.frameNumber != _lastProcessedFrame)
+	{
+		storeInputLoadAndPlr();
+		_lastProcessedFrame = currentFrameMoment.frameNumber;
+	}
 }
 
 void Emulator::enqueueFromHub(Timestamp sendTime, std::shared_ptr<IMessage> msg)
@@ -74,6 +89,8 @@ void Emulator::enqueueFromStation(
 	Timestamp sendTime,
 	std::shared_ptr<IMessage> msg)
 {
+	_uplinkAttempted += 1;
+
 	QueuedMessage queuedMessage;
 	queuedMessage.deliveryTime = sendTime + _stations[stationID]->tts() + _hub->tts();
 	queuedMessage.direction = Direction::ToHub;
@@ -94,7 +111,7 @@ void Emulator::updateDownlink(Timestamp now, const std::vector<QueuedMessage>& r
 
 		auto station = _stations[message.stationID];
 		if (station)
-			station->handleMessage(message.msg, now);
+			station->handleMessage(message.msg, message.deliveryTime);
 	}
 }
 
@@ -113,19 +130,41 @@ void Emulator::updateUplink(Timestamp now, const std::vector<QueuedMessage>& rel
 	for (auto pair : msgs)
 	{
 		if (pair.second.size() == 1)
+		{
+			_uplinkOk += static_cast<std::uint64_t>(msgs.size());
 			_hub->handleMessage(pair.second[0], pair.first);
-		else if (msgs.size() > 1)
+		}
+		else if (pair.second.size() > 1)
+		{
+			_uplinkLost += static_cast<std::uint64_t>(msgs.size());
 			_hub->handleMessage(std::make_shared<CollisionReport>(), pair.first);
+		}
 	}
 }
 
-std::uint32_t Emulator::joinedStationsCount() const
+std::uint32_t Emulator::stationsCountOnState(TerminalState state) const
 {
 	std::uint32_t ret = 0;
 	for (auto& station : _stations)
-		if (station && station->joinedTime().has_value())
+		if (station && station->currentState() == state)
 			++ret;
 	return ret;
+}
+
+void Emulator::storeInputLoadAndPlr()
+{
+	if (_uplinkSlotsWithTraffic == 0)
+	{
+		_previousFramePlr = 0;
+		_previousFrameIncomeLoad = 0;
+	}
+	else
+	{
+		_previousFrameIncomeLoad = static_cast<double>(_uplinkAttempted) / static_cast<double>(_frameCalculator->frameConfig().slotCountInFrame / 2);
+		_previousFramePlr = static_cast<double>(_uplinkLost) / static_cast<double>(_uplinkAttempted);
+	}
+	_uplinkAttempted = 0;
+	_uplinkSlotsWithTraffic = 0;
 }
 
 } // namespace starTopologyEmulator
