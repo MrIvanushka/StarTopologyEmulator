@@ -6,19 +6,25 @@
 namespace starTopologyEmulator
 {
 
-EmaIncomeLoadEstimator::EmaIncomeLoadEstimator(EmaIncomeLoadEstimatorConfig config)
-	: _cfg(std::move(config))
+EmaIncomeLoadEstimator::EmaIncomeLoadEstimator(
+	std::unique_ptr<IIncomeLoadEstimator> instantEstimator,
+	EmaIncomeLoadEstimatorConfig config)
+	: _instantEstimator(std::move(instantEstimator))
+	, _cfg(std::move(config))
 {
-	REGISTER_METRIC(_smoothedG, "Оценка входной нагрузки");
-	REGISTER_METRIC(_smoothedPlr, "Оценка PLR");
+	REGISTER_METRIC_SUBFOLDER(_instantEstimator.get());
+	REGISTER_METRIC(_smoothedG, "Сглаженная оценка входной нагрузки");
+	REGISTER_METRIC(_smoothedPlr, "Сглаженная оценка PLR");
 }
 
 void EmaIncomeLoadEstimator::update(const RandomAccessFrameResult& result)
 {
 	if (result.totalRaSlots == 0) return;
 
-	double instantG = calculateInstantG(result);
-	double instantPlr = calculateInstantPlr(result);
+	_instantEstimator->update(result);
+
+	double instantG = _instantEstimator->incomeLoad();
+	double instantPlr = _instantEstimator->plr();
 
 	if (_isFirstUpdate)
 	{
@@ -48,22 +54,6 @@ void EmaIncomeLoadEstimator::reset()
 	_smoothedG = 0.0;
 	_smoothedPlr = 0.0;
 	_isFirstUpdate = true;
-}
-
-double EmaIncomeLoadEstimator::calculateInstantG(const RandomAccessFrameResult& res) const
-{
-	double totalAttempts = res.successSlots + (res.collisionSlots * _cfg.collisionWeight);
-	return totalAttempts / static_cast<double>(res.totalRaSlots);
-}
-
-double EmaIncomeLoadEstimator::calculateInstantPlr(const RandomAccessFrameResult& res) const
-{
-	uint32_t totalAttempts = res.successSlots + res.collisionSlots;
-	
-	if (totalAttempts == 0)
-		return 0.0;
-
-	return static_cast<double>(res.collisionSlots) / totalAttempts;
 }
 
 } // namespace starTopologyEmulator
