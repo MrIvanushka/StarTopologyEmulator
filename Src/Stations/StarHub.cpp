@@ -64,11 +64,8 @@ void StarHub::onFrameEnd(std::uint64_t frameNumber)
 	_frameAccumulator.totalRaSlots = currentPlan->randomAccessSlotsCountInFrame();
 
 	_incomeLoadEstimator->update(_frameAccumulator);
-
-	auto g = _incomeLoadEstimator->incomeLoad();
-	auto plr = _incomeLoadEstimator->plr();
-
-	auto newPlan = _strategy->generate(frameNumber, g, plr);
+	auto targetFrameNumber = frameNumber + _tts * 5 / (_frameCalculator->frameConfig().slotDuration * _frameCalculator->frameConfig().slotCountInFrame);
+	auto newPlan = _strategy->generate(frameNumber, targetFrameNumber);
 	_dynamicFrameSetings->handlePlan(newPlan);
 
 	_sendFunc(_frameCalculator->slotBeginTime(frameNumber + 1, 0), newPlan);

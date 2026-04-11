@@ -8,10 +8,10 @@
 namespace starTopologyEmulator
 {
 
-class IStarHubStrategy : public IMetricProducer
+class IFtpGenerator : public IMetricProducer
 {
 public:
-	virtual std::shared_ptr<StarHubPlanMessage> generate(std::uint64_t currentFrame, std::uint64_t targetFrame) = 0;
+	virtual StarHubPlanMessage::FtpConfig generate(std::uint64_t frame) = 0;
 };
 
 } // namespace starTopologyEmulator

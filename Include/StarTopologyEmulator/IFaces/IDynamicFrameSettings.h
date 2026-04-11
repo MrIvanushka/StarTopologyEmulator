@@ -18,6 +18,8 @@ public:
 	virtual void clearOutdated(std::uint64_t frame) = 0;
 
 	virtual std::shared_ptr<StarHubPlanMessage> currentPlan(std::uint64_t frame) const = 0;
+
+	virtual std::uint64_t earliestPlanNumber() const = 0;
 };
 
 } // namespace starTopologyEmulator

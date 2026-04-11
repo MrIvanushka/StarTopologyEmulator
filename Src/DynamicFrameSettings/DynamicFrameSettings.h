@@ -10,13 +10,15 @@ namespace starTopologyEmulator
 class DynamicFrameSettings : public IDynamicFrameSettings
 {
 public:
-	DynamicFrameSettings(int maxPlansStored = 1'000);
+	DynamicFrameSettings(int maxPlansStored = 10'000);
 	
 	void handlePlan(std::shared_ptr<StarHubPlanMessage>) override;
 
 	void clearOutdated(std::uint64_t frame) override;
 
 	std::shared_ptr<StarHubPlanMessage> currentPlan(std::uint64_t frame) const override;
+
+	std::uint64_t earliestPlanNumber() const override;
 private:
 	const int _maxPlansStored;
 

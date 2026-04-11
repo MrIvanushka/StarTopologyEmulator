@@ -8,10 +8,13 @@
 namespace starTopologyEmulator
 {
 
-class IStarHubStrategy : public IMetricProducer
+class IIncomeLoadController : public IMetricProducer
 {
 public:
-	virtual std::shared_ptr<StarHubPlanMessage> generate(std::uint64_t currentFrame, std::uint64_t targetFrame) = 0;
+	virtual StarHubPlanMessage::BackoffConfig generate(
+		std::uint64_t plannedRaSlots,
+		std::uint64_t currentFrame,
+		std::uint64_t targetFrame) = 0;
 };
 
 } // namespace starTopologyEmulator
