@@ -16,6 +16,7 @@ public:
 	StarStation(
 		std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
 		std::unique_ptr<IFrameCalculator> frameCalculator,
+		std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 		StationID id,
 		int messagesNeeded,
 		Timestamp tts,

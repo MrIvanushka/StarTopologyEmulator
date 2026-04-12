@@ -6,12 +6,16 @@
 namespace starTopologyEmulator
 {
 
-KalmanIncomeLoadEstimator::KalmanIncomeLoadEstimator(KalmanIncomeLoadEstimatorConfig config)
-: _cfg(std::move(config))
+KalmanIncomeLoadEstimator::KalmanIncomeLoadEstimator(
+    std::unique_ptr<IIncomeLoadEstimator> instantEstimator,
+    KalmanIncomeLoadEstimatorConfig config)
+    : _instantEstimator(std::move(instantEstimator))
+    , _cfg(std::move(config))
 {
-        REGISTER_METRIC(_stateG.value, "Оценка входной нагрузки");
+        REGISTER_METRIC_SUBFOLDER(_instantEstimator.get());
+        REGISTER_METRIC(_stateG.value, "Сглаженная оценка входной нагрузки");
         REGISTER_METRIC(_stateG.error, "Априорная ошибка оценки входной нагрузки");
-        REGISTER_METRIC(_statePlr.value, "Оценка PLR");
+        REGISTER_METRIC(_statePlr.value, "Сглаженная оценка PLR");
         REGISTER_METRIC(_statePlr.error, "Априорная ошибка оценки PLR");
 }
 
@@ -20,8 +24,9 @@ void KalmanIncomeLoadEstimator::update(const RandomAccessFrameResult& result)
         if (result.totalRaSlots == 0)
                 return;
 
-        double instG = calculateInstantG(result);
-        double instPlr = calculateInstantPlr(result);
+        _instantEstimator->update(result);
+        double instG = _instantEstimator->incomeLoad();
+        double instPlr = _instantEstimator->plr();
 
         double rCurrent = _cfg.rBase / static_cast<double>(result.totalRaSlots);
 

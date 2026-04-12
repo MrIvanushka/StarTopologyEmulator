@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <memory>
 
 #include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
@@ -14,7 +15,9 @@ class KalmanIncomeLoadEstimator : public IIncomeLoadEstimator
 {
 	DECLARE_METRICS("Оценка входной нагрузки (фильтр Калмана)")
 public:
-	explicit KalmanIncomeLoadEstimator(KalmanIncomeLoadEstimatorConfig);
+	explicit KalmanIncomeLoadEstimator(
+		std::unique_ptr<IIncomeLoadEstimator>,
+		KalmanIncomeLoadEstimatorConfig);
 
 	void update(const RandomAccessFrameResult& result) override;
 
@@ -36,6 +39,8 @@ private:
 	double calculateInstantG(const RandomAccessFrameResult& res) const;
 
 	double calculateInstantPlr(const RandomAccessFrameResult& res) const;
+
+	std::unique_ptr<IIncomeLoadEstimator> _instantEstimator;
 
 	KalmanIncomeLoadEstimatorConfig _cfg;
 	KalmanState _stateG{0.0, 1.0};

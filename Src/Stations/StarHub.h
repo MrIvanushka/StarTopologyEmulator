@@ -4,6 +4,7 @@
 #include <map>
 
 #include "Metrics/Metrics.h"
+#include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
@@ -23,6 +24,7 @@ public:
 		std::unique_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
 		std::unique_ptr<IFrameCalculator> frameCalculator,
 		std::unique_ptr<IStarHubStrategy> strategy,
+		std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 		Timestamp tts);
 
 	void update(Timestamp currentTime) override;
@@ -40,12 +42,12 @@ private:
 	std::unique_ptr<IIncomeLoadEstimator> _incomeLoadEstimator;
 	std::unique_ptr<IFrameCalculator> _frameCalculator;
 	std::unique_ptr<IStarHubStrategy> _strategy;
+	std::unique_ptr<IDynamicFrameSettings> _dynamicFrameSetings;
 
 	Timestamp _tts;
 
 	std::vector<StationID> _pendingAnswers;
 
-	std::shared_ptr<StarHubPlanMessage> _currentPlan;
 	RandomAccessFrameResult _frameAccumulator;
 	std::uint64_t _lastProcessedFrame = 0;
 };

@@ -19,29 +19,34 @@ public:
 		bool   useExponential = true;
 		double pTx = 1.0;
 	};
+
+	struct FtpConfig
+	{
+		std::uint8_t onlineSlotsCountInFrame = 0;
+		std::uint8_t yellowSlotsCountInFrame = 0;
+		std::uint8_t randomAccessSlotsCountInFrame = 0;
+	};
 public:
 	StarHubPlanMessage(
-		std::uint8_t onlineSlots,
-		std::uint8_t yellowSlots,
-		std::uint8_t raSlots,
-		const BackoffConfig& cfg)
-		: _onlineSlotsCountInFrame(onlineSlots)
-		, _yellowSlotsCountInFrame(yellowSlots)
-		, _randomAccessSlotsCountInFrame(raSlots)
-		, _backoff(cfg)
+		std::uint64_t frame,
+		const FtpConfig& ftp,
+		const BackoffConfig& backoff)
+		: _frame(frame)
+		, _ftp(ftp)
+		, _backoff(backoff)
 	{}
 
 	MessageType type() const override { return MessageType::StarHubPlan; }
 
-	std::uint8_t onlineSlotsCountInFrame() { return _onlineSlotsCountInFrame; }
-	std::uint8_t yellowSlotsCountInFrame() { return _yellowSlotsCountInFrame; }
+	std::uint64_t frame() const { return _frame; }
 
-	std::uint8_t randomAccessSlotsCountInFrame() const { return _randomAccessSlotsCountInFrame; }
-	BackoffConfig backoff() const { return _backoff; }
+	std::uint8_t onlineSlotsCountInFrame() const { return _ftp.onlineSlotsCountInFrame; }
+	std::uint8_t yellowSlotsCountInFrame() const { return _ftp.yellowSlotsCountInFrame; }
+	std::uint8_t randomAccessSlotsCountInFrame() const { return _ftp.randomAccessSlotsCountInFrame; }
+	const BackoffConfig& backoff() const { return _backoff; }
 private:
-	std::uint8_t _onlineSlotsCountInFrame;
-	std::uint8_t _yellowSlotsCountInFrame;
-	std::uint8_t _randomAccessSlotsCountInFrame;
+	std::uint64_t _frame;
+	FtpConfig _ftp;
 	BackoffConfig _backoff;
 };
 

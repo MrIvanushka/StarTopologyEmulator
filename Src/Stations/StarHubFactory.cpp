@@ -5,16 +5,15 @@
 namespace starTopologyEmulator
 {
 
-std::shared_ptr<IStarHub> StarHubFactory::make(
-	std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
-	std::unique_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
-	std::unique_ptr<IFrameCalculator> frameCalculator,
-	std::unique_ptr<IStarHubStrategy> strategy,
-	Timestamp tts)
+std::shared_ptr<IStarHub> StarHubFactory::make(StarHubInitData&& initData)
 {
-	return std::make_shared<StarHub>(sendFunc,
-		std::move(incomeLoadEstimator), std::move(frameCalculator),
-		std::move(strategy), tts);
+	return std::make_shared<StarHub>(
+		initData.sendFunc,
+		std::move(initData.incomeLoadEstimator),
+		std::move(initData.frameCalculator),
+		std::move(initData.strategy),
+		std::move(initData.dynamicFrameSettings),
+		initData.tts);
 }
 
 } // namespace starTopologyEmulator

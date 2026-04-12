@@ -8,18 +8,18 @@ StarHub::StarHub(
 	std::unique_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
 	std::unique_ptr<IFrameCalculator> frameCalculator,
 	std::unique_ptr<IStarHubStrategy> strategy,
+	std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	Timestamp tts)
 	: _sendFunc(std::move(sendFunc))
 	, _incomeLoadEstimator(std::move(incomeLoadEstimator))
 	, _frameCalculator(std::move(frameCalculator))
 	, _strategy(std::move(strategy))
+	, _dynamicFrameSetings(std::move(dynamicFrameSettings))
 	, _tts(tts)
 {
 	REGISTER_METRIC_SUBFOLDER(_strategy.get());
 	REGISTER_METRIC_SUBFOLDER(_incomeLoadEstimator.get());
 	REGISTER_METRIC(_pendingAnswers.size(), "Размер очереди ожидания");
-
-	_currentPlan = _strategy->generate(0, 0);
 }
 
 void StarHub::update(Timestamp currentTime)
@@ -37,10 +37,11 @@ void StarHub::handleMessage(std::shared_ptr<IMessage> msg, Timestamp arrivalTime
 {
 	FrameMoment handleMoment = _frameCalculator->frameMoment(arrivalTime);
 
-	//if (handleMoment.frameNumber != _lastProcessedFrame)
-	//	return;
+	auto currentPlan = _dynamicFrameSetings->currentPlan(handleMoment.frameNumber);
+	if (!currentPlan)
+		return;
 
-	if (handleMoment.slotNumber < _currentPlan->randomAccessSlotsCountInFrame()) {
+	if (handleMoment.slotNumber < currentPlan->randomAccessSlotsCountInFrame()) {
 
 		if (msg->type() == MessageType::StarStation)
 		{
@@ -60,16 +61,16 @@ Timestamp StarHub::tts() const
 
 void StarHub::onFrameEnd(std::uint64_t frameNumber)
 {
-	_frameAccumulator.totalRaSlots = _currentPlan->randomAccessSlotsCountInFrame();
+	auto currentPlan = _dynamicFrameSetings->currentPlan(frameNumber);
+
+	_frameAccumulator.totalRaSlots = currentPlan->randomAccessSlotsCountInFrame();
 
 	_incomeLoadEstimator->update(_frameAccumulator);
+	auto targetFrameNumber = frameNumber + _tts * 5 / (_frameCalculator->frameConfig().slotDuration * _frameCalculator->frameConfig().slotCountInFrame);
+	auto newPlan = _strategy->generate(frameNumber, targetFrameNumber);
+	_dynamicFrameSetings->handlePlan(newPlan);
 
-	auto g = _incomeLoadEstimator->incomeLoad();
-	auto plr = _incomeLoadEstimator->plr();
-
-	_currentPlan = _strategy->generate(g, plr);
-
-	_sendFunc(_frameCalculator->slotBeginTime(frameNumber + 1, 0), _currentPlan);
+	_sendFunc(_frameCalculator->slotBeginTime(frameNumber + 1, 0), newPlan);
 	_frameAccumulator = RandomAccessFrameResult();
 
 	sendAnswersToStations(_frameCalculator->slotBeginTime(frameNumber + 1, 0));

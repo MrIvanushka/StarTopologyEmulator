@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <memory>
 
 #include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
@@ -13,7 +14,9 @@ class EmaIncomeLoadEstimator : public IIncomeLoadEstimator
 {
 	DECLARE_METRICS("ќценка входной нагрузки (фильтр скольз€щего среднего)")
 public:
-	explicit EmaIncomeLoadEstimator(EmaIncomeLoadEstimatorConfig);
+	explicit EmaIncomeLoadEstimator(
+		std::unique_ptr<IIncomeLoadEstimator>,
+		EmaIncomeLoadEstimatorConfig);
 
 	void update(const RandomAccessFrameResult& result) override;
 
@@ -24,9 +27,7 @@ public:
 	void reset() override;
 
 private:
-	double calculateInstantG(const RandomAccessFrameResult& res) const;
-
-	double calculateInstantPlr(const RandomAccessFrameResult& res) const;
+	std::unique_ptr<IIncomeLoadEstimator> _instantEstimator;
 
 	EmaIncomeLoadEstimatorConfig _cfg;
 	double _smoothedG = 0.0;

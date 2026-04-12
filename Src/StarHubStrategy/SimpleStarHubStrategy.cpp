@@ -6,7 +6,11 @@
 namespace starTopologyEmulator
 {
 
-SimpleStarHubStrategy::SimpleStarHubStrategy(Config config) : _cfg(config)
+SimpleStarHubStrategy::SimpleStarHubStrategy(
+	std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
+	StarHubStrategyConfig&& config)
+	: _cfg(std::move(config))
+	, _incomeLoadEstimator(incomeLoadEstimator)
 {
 	REGISTER_METRIC(_baseWindow, "Размер окна backoff");
 	REGISTER_METRIC(_maxWindow, "Максимальный размер окна backoff");
@@ -14,11 +18,13 @@ SimpleStarHubStrategy::SimpleStarHubStrategy(Config config) : _cfg(config)
 	REGISTER_METRIC(_raSlotsCount, "Количество слотов случайного доступа");
 }
 
-std::shared_ptr<StarHubPlanMessage> SimpleStarHubStrategy::generate(double g, double plr)
+std::shared_ptr<StarHubPlanMessage> SimpleStarHubStrategy::generate(std::uint64_t currentFrame, std::uint64_t targetFrame)
 {
+	auto g = _incomeLoadEstimator->incomeLoad();
+	auto plr = _incomeLoadEstimator->plr();
 	_raSlotsCount = calculateRaSlots(g, plr);
 
-	StarHubPlanMessage::BackoffConfig backoff{}; // <= важно: value-init, чтобы не было мусора
+	StarHubPlanMessage::BackoffConfig backoff{};
 	backoff.useExponential = true;
 	backoff.exponentBase = 2.0;
 
@@ -41,7 +47,8 @@ std::shared_ptr<StarHubPlanMessage> SimpleStarHubStrategy::generate(double g, do
 	int yellow = 0;
 	int online = static_cast<int>(_cfg.totalSlots) - _raSlotsCount - yellow;
 
-	return std::make_shared<StarHubPlanMessage>(online, yellow, _raSlotsCount, backoff);
+	StarHubPlanMessage::FtpConfig ftp = { online, yellow, _raSlotsCount };
+	return std::make_shared<StarHubPlanMessage>(targetFrame, ftp, backoff);
 }
 
 int SimpleStarHubStrategy::calculateRaSlots(double g, double plr)

@@ -1,0 +1,40 @@
+#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/IncomeLoadControllerFactory.h"
+
+#include "HysteresisLoadController.h"
+#include "SimpleMarginalUtilityBasedLoadController.h"
+#include "StaticIncomeLoadController.h"
+#include "TargetLoadController.h"
+
+namespace starTopologyEmulator
+{
+
+std::unique_ptr<IIncomeLoadController> IncomeLoadControllerFactory::make(StarHubPlanMessage::BackoffConfig&& config)
+{
+	return std::make_unique<StaticIncomeLoadController>(std::move(config));
+}
+
+std::unique_ptr<IIncomeLoadController> IncomeLoadControllerFactory::make(
+	std::shared_ptr<IDynamicFrameSettings> dynamicSettings,
+	std::shared_ptr<IIncomeStationsPredictor> predictor,
+	HysteresisLoadControllerConfig&& config)
+{
+	return std::make_unique<HysteresisLoadController>(dynamicSettings, predictor, std::move(config));
+}
+
+std::unique_ptr<IIncomeLoadController> IncomeLoadControllerFactory::make(
+	std::shared_ptr<IDynamicFrameSettings> dynamicSettings,
+	std::shared_ptr<IIncomeStationsPredictor> predictor, 
+	SimpleMarginalUtilityBasedLoadControllerConfig&& config)
+{
+	return std::make_unique<SimpleMarginalUtilityBasedLoadController>(dynamicSettings, predictor, std::move(config));
+}
+
+std::unique_ptr<IIncomeLoadController> IncomeLoadControllerFactory::make(
+	std::shared_ptr<IDynamicFrameSettings> dynamicSettings,
+	std::shared_ptr<IIncomeStationsPredictor> predictor, 
+	TargetLoadControllerConfig&& config)
+{
+	return std::make_unique<TargetLoadController>(dynamicSettings, predictor, std::move(config));
+}
+
+} // namespace starTopologyEmulator
