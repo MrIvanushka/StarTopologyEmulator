@@ -23,6 +23,7 @@ public:
 	Emulator(
 		std::function<std::shared_ptr<IStarStation>(SendFunc, StationID)>,
 		std::function<std::shared_ptr<IStarHub>(SendFunc)>,
+		std::unique_ptr<IFrameCalculator>,
 		int stationCount);
 
 	void update(Timestamp currentTime) override;
@@ -58,14 +59,25 @@ private:
 
         void updateUplink(Timestamp, const std::vector<QueuedMessage>&);
 
-        std::uint32_t joinedStationsCount() const;
+	std::uint32_t stationsCountOnState(TerminalState) const;
+
 private:
+	void storeInputLoadAndPlr();
+
 	std::unique_ptr<IFrameCalculator> _frameCalculator;
 
 	std::shared_ptr<IStarHub> _hub;
 	std::vector<std::shared_ptr<IStarStation>> _stations;
 
 	std::multimap<Timestamp, QueuedMessage> _queue;
+
+	std::uint64_t _lastProcessedFrame{ 0 };
+	double _previousFrameIncomeLoad{ 0 };
+	double _previousFramePlr{ 0 };
+	std::uint64_t _uplinkAttempted{ 0 };
+	std::uint64_t _uplinkOk{ 0 };
+	std::uint64_t _uplinkLost{ 0 };
+	std::uint64_t _uplinkSlotsWithTraffic{ 0 };
 };
 
 } // namespace starTopologyEmulator

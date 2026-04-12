@@ -17,6 +17,9 @@ StarHub::StarHub(
 {
 	REGISTER_METRIC_SUBFOLDER(_strategy.get());
 	REGISTER_METRIC_SUBFOLDER(_incomeLoadEstimator.get());
+	REGISTER_METRIC(_pendingAnswers.size(), "Размер очереди ожидания");
+
+	_currentPlan = _strategy->generate(0, 0);
 }
 
 void StarHub::update(Timestamp currentTime)
@@ -34,12 +37,14 @@ void StarHub::handleMessage(std::shared_ptr<IMessage> msg, Timestamp arrivalTime
 {
 	FrameMoment handleMoment = _frameCalculator->frameMoment(arrivalTime);
 
-	if (handleMoment.frameNumber != _lastProcessedFrame)
-		return;
+	//if (handleMoment.frameNumber != _lastProcessedFrame)
+	//	return;
 
 	if (handleMoment.slotNumber < _currentPlan->randomAccessSlotsCountInFrame()) {
 
-		if (msg->type() == MessageType::StarStation) {
+		if (msg->type() == MessageType::StarStation)
+		{
+			_pendingAnswers.push_back(std::dynamic_pointer_cast<StarStationMessage>(msg)->stationID());
 			_frameAccumulator.successSlots++;
 		}
 		else if (msg->type() == MessageType::CollisionReport) {
@@ -66,6 +71,8 @@ void StarHub::onFrameEnd(std::uint64_t frameNumber)
 
 	_sendFunc(_frameCalculator->slotBeginTime(frameNumber + 1, 0), _currentPlan);
 	_frameAccumulator = RandomAccessFrameResult();
+
+	sendAnswersToStations(_frameCalculator->slotBeginTime(frameNumber + 1, 0));
 }
 
 void StarHub::sendAnswersToStations(Timestamp sendTime)

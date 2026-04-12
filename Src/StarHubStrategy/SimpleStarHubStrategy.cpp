@@ -18,26 +18,28 @@ std::shared_ptr<StarHubPlanMessage> SimpleStarHubStrategy::generate(double g, do
 {
 	_raSlotsCount = calculateRaSlots(g, plr);
 
-	StarHubPlanMessage::BackoffConfig backoff;
+	StarHubPlanMessage::BackoffConfig backoff{}; // <= важно: value-init, чтобы не было мусора
 	backoff.useExponential = true;
 	backoff.exponentBase = 2.0;
 
 	double loadFactor = std::clamp(g / _cfg.heavyLoadG, 0.0, 1.0);
 	double errorFactor = std::clamp(plr / (_cfg.targetPlr * 2), 0.0, 1.0);
-
 	double stress = std::max(loadFactor, errorFactor);
 
 	_pTx = _cfg.maxPTx - stress * (_cfg.maxPTx - _cfg.minPTx);
-	_baseWindow = static_cast<uint8_t>(_cfg.minBaseWindow +
-	std::round(stress * (_cfg.maxBaseWindow - _cfg.minBaseWindow)));
-	_maxWindow = backoff.baseWindow * 4;
+
+	_baseWindow = static_cast<std::uint8_t>(
+		_cfg.minBaseWindow + std::lround(stress * (_cfg.maxBaseWindow - _cfg.minBaseWindow))
+		);
+
+	_maxWindow = static_cast<double>(_baseWindow) * 4.0;
 
 	backoff.pTx = _pTx;
-	backoff.baseWindow = _baseWindow;
+	backoff.baseWindow = static_cast<std::uint8_t>(_baseWindow);
 	backoff.maxWindow = _maxWindow;
 
 	int yellow = 0;
-	int online = _cfg.totalSlots - _raSlotsCount - yellow;
+	int online = static_cast<int>(_cfg.totalSlots) - _raSlotsCount - yellow;
 
 	return std::make_shared<StarHubPlanMessage>(online, yellow, _raSlotsCount, backoff);
 }
@@ -45,8 +47,14 @@ std::shared_ptr<StarHubPlanMessage> SimpleStarHubStrategy::generate(double g, do
 int SimpleStarHubStrategy::calculateRaSlots(double g, double plr)
 {
 	double raScale = (g > 0.1) ? (g + plr) : 0.1;
-	auto targetRa = static_cast<std::uint8_t>(_cfg.totalSlots * 0.2 * raScale);
-	return std::clamp(targetRa, _cfg.minRaSlots, _cfg.maxRaSlots);
+	double raw = static_cast<double>(_cfg.totalSlots) * 0.2 * raScale;
+
+	int targetRa = static_cast<int>(raw);
+	return std::clamp(
+		targetRa,
+		static_cast<int>(_cfg.minRaSlots),
+		static_cast<int>(_cfg.maxRaSlots)
+	);
 }
 
 } // namespace starTopologyEmulator

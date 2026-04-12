@@ -24,7 +24,7 @@ StarStation::StarStation(
 	_context->id = id;
 	_context->frameCalculator = std::move(frameCalculator);
 	_context->messagesNeeded = messagesNeeded;
-	_context->ackTimeout = 5 * tts;
+	_context->ackTimeout = 6 * tts;
 	_context->rng = &_rng;
 	_context->sendFunc = std::move(sendFunc);
 
