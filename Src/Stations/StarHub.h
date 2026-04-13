@@ -21,10 +21,10 @@ class StarHub : public IStarHub
 public:
 	StarHub(
 		std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
-		std::unique_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
-		std::unique_ptr<IFrameCalculator> frameCalculator,
+		std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
+		std::shared_ptr<IFrameCalculator> frameCalculator,
+		std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 		std::unique_ptr<IStarHubStrategy> strategy,
-		std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 		Timestamp tts);
 
 	void update(Timestamp currentTime) override;
@@ -39,10 +39,10 @@ private:
 private:
 	std::function<void(Timestamp, std::shared_ptr<IMessage>)> _sendFunc;
 	
-	std::unique_ptr<IIncomeLoadEstimator> _incomeLoadEstimator;
-	std::unique_ptr<IFrameCalculator> _frameCalculator;
+	std::shared_ptr<IIncomeLoadEstimator> _incomeLoadEstimator;
+	std::shared_ptr<IFrameCalculator> _frameCalculator;
+	std::shared_ptr<IDynamicFrameSettings> _dynamicFrameSettings;
 	std::unique_ptr<IStarHubStrategy> _strategy;
-	std::unique_ptr<IDynamicFrameSettings> _dynamicFrameSetings;
 
 	Timestamp _tts;
 

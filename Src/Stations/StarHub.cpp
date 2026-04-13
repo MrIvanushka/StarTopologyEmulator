@@ -5,16 +5,16 @@ namespace starTopologyEmulator
 
 StarHub::StarHub(
 	std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
-	std::unique_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
-	std::unique_ptr<IFrameCalculator> frameCalculator,
+	std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
+	std::shared_ptr<IFrameCalculator> frameCalculator,
+	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	std::unique_ptr<IStarHubStrategy> strategy,
-	std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	Timestamp tts)
 	: _sendFunc(std::move(sendFunc))
-	, _incomeLoadEstimator(std::move(incomeLoadEstimator))
-	, _frameCalculator(std::move(frameCalculator))
+	, _incomeLoadEstimator(incomeLoadEstimator)
+	, _frameCalculator(frameCalculator)
+	, _dynamicFrameSettings(dynamicFrameSettings)
 	, _strategy(std::move(strategy))
-	, _dynamicFrameSetings(std::move(dynamicFrameSettings))
 	, _tts(tts)
 {
 	REGISTER_METRIC_SUBFOLDER(_strategy.get());
@@ -37,7 +37,7 @@ void StarHub::handleMessage(std::shared_ptr<IMessage> msg, Timestamp arrivalTime
 {
 	FrameMoment handleMoment = _frameCalculator->frameMoment(arrivalTime);
 
-	auto currentPlan = _dynamicFrameSetings->currentPlan(handleMoment.frameNumber);
+	auto currentPlan = _dynamicFrameSettings->currentPlan(handleMoment.frameNumber);
 	if (!currentPlan)
 		return;
 
@@ -61,14 +61,14 @@ Timestamp StarHub::tts() const
 
 void StarHub::onFrameEnd(std::uint64_t frameNumber)
 {
-	auto currentPlan = _dynamicFrameSetings->currentPlan(frameNumber);
+	auto currentPlan = _dynamicFrameSettings->currentPlan(frameNumber);
 
-	_frameAccumulator.totalRaSlots = currentPlan->randomAccessSlotsCountInFrame();
+	_frameAccumulator.totalRaSlots = currentPlan ? currentPlan->randomAccessSlotsCountInFrame() : 0;
 
 	_incomeLoadEstimator->update(_frameAccumulator);
-	auto targetFrameNumber = frameNumber + _tts * 5 / (_frameCalculator->frameConfig().slotDuration * _frameCalculator->frameConfig().slotCountInFrame);
+	auto targetFrameNumber = frameNumber + 2 + _tts * 5 / (_frameCalculator->frameConfig().slotDuration * _frameCalculator->frameConfig().slotCountInFrame);
 	auto newPlan = _strategy->generate(frameNumber, targetFrameNumber);
-	_dynamicFrameSetings->handlePlan(newPlan);
+	_dynamicFrameSettings->handlePlan(newPlan);
 
 	_sendFunc(_frameCalculator->slotBeginTime(frameNumber + 1, 0), newPlan);
 	_frameAccumulator = RandomAccessFrameResult();

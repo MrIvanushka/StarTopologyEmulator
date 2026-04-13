@@ -25,6 +25,15 @@ void DynamicFrameSettings::clearOutdated(std::uint64_t frame)
 	}
 }
 
+std::shared_ptr<StarHubPlanMessage> DynamicFrameSettings::currentPlan(std::uint64_t frame) const
+{
+	for (auto plan : _plans)
+		if (plan->frame() == frame)
+			return plan;
+
+	return nullptr;
+}
+
 std::uint64_t DynamicFrameSettings::earliestPlanNumber() const
 {
 	return _plans.front()->frame();
