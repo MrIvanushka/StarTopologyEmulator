@@ -15,7 +15,9 @@ LinearRegressionIncomeStationsPredictor::LinearRegressionIncomeStationsPredictor
 	, _incomeLoadEstimator(incomeLoadEstimator)
 	, _dynamicFrameSettings(dynamicFrameSettings)
 	, _frameCalculator(frameCalculator)
-{}
+{
+	REGISTER_METRIC(_currentEstimationResult, "ќценка количества станций в RA");
+}
 
 double LinearRegressionIncomeStationsPredictor::estimateReadyUsers(
 	std::uint64_t currentFrame,
@@ -117,6 +119,7 @@ double LinearRegressionIncomeStationsPredictor::estimateReadyUsers(
 	if (!std::isfinite(predicted))
 		return std::max(0.0, points.back().users);
 
+	_currentEstimationResult = predicted;
 	return std::max(0.0, predicted);
 }
 

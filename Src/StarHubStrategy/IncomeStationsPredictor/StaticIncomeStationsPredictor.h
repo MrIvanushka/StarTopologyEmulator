@@ -8,20 +8,20 @@
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
-#include "StarTopologyEmulator/StarHubStrategy/IncomeStationsPredictor/LinearRegressionIncomeStationsPredictorConfig.h"
+#include "StarTopologyEmulator/StarHubStrategy/IncomeStationsPredictor/StaticIncomeStationsPredictorConfig.h"
 
 namespace starTopologyEmulator
 {
 
-class LinearRegressionIncomeStationsPredictor : public IIncomeStationsPredictor
+class StaticIncomeStationsPredictor : public IIncomeStationsPredictor
 {
 	DECLARE_METRICS("Оценщик количества входящих станций")
 public:
-	explicit LinearRegressionIncomeStationsPredictor(
+	explicit StaticIncomeStationsPredictor(
 		std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
 		std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 		std::shared_ptr<IFrameCalculator> frameCalculator,
-		LinearRegressionIncomeStationsPredictorConfig&& config);
+		StaticIncomeStationsPredictorConfig&& config);
 
 	double estimateReadyUsers(
 		std::uint64_t currentFrame,
@@ -38,7 +38,7 @@ private:
 	std::optional<double> historyReadyUsers(
 		const std::shared_ptr<StarHubPlanMessage>& plan) const;
 private:
-	const LinearRegressionIncomeStationsPredictorConfig _config;
+	const StaticIncomeStationsPredictorConfig _config;
 
 	std::unordered_map<std::uint64_t, double> _incomeLoadHistory;
 	std::shared_ptr<IIncomeLoadEstimator> _incomeLoadEstimator;

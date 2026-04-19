@@ -31,6 +31,8 @@ private:
 
 	double _instantG = 0;
 	double _instantPlr = 0;
+
+	RandomAccessFrameResult _lastResult;
 };
 
 } // namespace starTopologyEmulator

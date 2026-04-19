@@ -9,6 +9,8 @@ CommonStarHubStrategy::CommonStarHubStrategy(
 	: _ftpGenerator(std::move(ftpGenerator))
 	, _incomeLoadController(std::move(incomeLoadController))
 {
+	REGISTER_METRIC_SUBFOLDER(_ftpGenerator.get());
+	REGISTER_METRIC_SUBFOLDER(_incomeLoadController.get());
 	REGISTER_METRIC(_lastPlan->backoff().baseWindow, "Размер окна backoff");
 	REGISTER_METRIC(_lastPlan->backoff().maxWindow, "Максимальный размер окна backoff");
 	REGISTER_METRIC(_lastPlan->backoff().pTx, "Вероятность занять слот абонентом");

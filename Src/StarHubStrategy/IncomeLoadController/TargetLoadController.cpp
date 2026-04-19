@@ -13,7 +13,11 @@ TargetLoadController::TargetLoadController(
 	: _config(std::move(config))
 	, _dynamicFrameSettings(dynamicFrameSettings)
 	, _readyUsersPredictor(readyUsersPredictor)
-{}
+{
+	REGISTER_METRIC_SUBFOLDER(_readyUsersPredictor.get());
+	REGISTER_METRIC(_currentPlan ? _currentPlan->backoff().pTx : 0, "Текущая вероятность вещания");
+	REGISTER_METRIC(_currentPlan ? _currentPlan->backoff().baseWindow : 0, "Текущая ширина окна backoff");
+}
 
 StarHubPlanMessage::BackoffConfig TargetLoadController::generate(
 	std::uint64_t plannedRaSlots,
@@ -21,6 +25,9 @@ StarHubPlanMessage::BackoffConfig TargetLoadController::generate(
 	std::uint64_t targetFrame)
 {
 	const auto& currentPlan = _dynamicFrameSettings->currentPlan(currentFrame);
+	_currentPlan = currentPlan;
+	if (!currentPlan)
+		return {};
 
 	const double predictedReadyUsers =
 		_readyUsersPredictor->estimateReadyUsers(currentFrame, targetFrame);

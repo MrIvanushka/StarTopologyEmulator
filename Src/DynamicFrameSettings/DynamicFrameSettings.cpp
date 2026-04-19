@@ -36,6 +36,9 @@ std::shared_ptr<StarHubPlanMessage> DynamicFrameSettings::currentPlan(std::uint6
 
 std::uint64_t DynamicFrameSettings::earliestPlanNumber() const
 {
+	if (_plans.empty())
+		return 0;
+
 	return _plans.front()->frame();
 }
 

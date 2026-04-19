@@ -26,7 +26,10 @@ private:
 	std::unique_ptr<IFtpGenerator> _ftpGenerator;
 	std::unique_ptr<IIncomeLoadController> _incomeLoadController;
 
-	std::shared_ptr<StarHubPlanMessage> _lastPlan;
+	std::shared_ptr<StarHubPlanMessage> _lastPlan = std::make_shared<StarHubPlanMessage>(
+		0,
+		StarHubPlanMessage::FtpConfig(),
+		StarHubPlanMessage::BackoffConfig());
 };
 
 } // namespace starTopologyEmulator

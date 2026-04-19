@@ -51,6 +51,7 @@ void StarHub::handleMessage(std::shared_ptr<IMessage> msg, Timestamp arrivalTime
 		else if (msg->type() == MessageType::CollisionReport) {
 			_frameAccumulator.collisionSlots++;
 		}
+		_frameAccumulator.idleSlots -= 1;
 	}
 }
 
@@ -72,6 +73,8 @@ void StarHub::onFrameEnd(std::uint64_t frameNumber)
 
 	_sendFunc(_frameCalculator->slotBeginTime(frameNumber + 1, 0), newPlan);
 	_frameAccumulator = RandomAccessFrameResult();
+	auto nextFramePlan = _dynamicFrameSettings->currentPlan(frameNumber + 1);
+	_frameAccumulator.idleSlots = nextFramePlan ? nextFramePlan->randomAccessSlotsCountInFrame() : 0;
 
 	sendAnswersToStations(_frameCalculator->slotBeginTime(frameNumber + 1, 0));
 }
