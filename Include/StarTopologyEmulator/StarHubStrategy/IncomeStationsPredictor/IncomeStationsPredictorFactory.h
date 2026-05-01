@@ -19,6 +19,10 @@ public:
         std::shared_ptr<IDynamicFrameSettings>,
         std::shared_ptr<IFrameCalculator>,
         LinearRegressionIncomeStationsPredictorConfig&&);
+
+    static std::unique_ptr<IIncomeStationsPredictor> make(
+        std::shared_ptr<IIncomeLoadEstimator>,
+        std::shared_ptr<IDynamicFrameSettings>);
 };
 
 } // namespace starTopologyEmulator

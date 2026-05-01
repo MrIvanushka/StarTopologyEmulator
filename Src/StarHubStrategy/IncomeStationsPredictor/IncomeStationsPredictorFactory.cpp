@@ -1,5 +1,6 @@
 #include "StarTopologyEmulator/StarHubStrategy/IncomeStationsPredictor/IncomeStationsPredictorFactory.h"
 
+#include "CogorthyIncomeStationsPredictor.h"
 #include "LinearRegressionIncomeStationsPredictor.h"
 
 namespace starTopologyEmulator
@@ -16,6 +17,15 @@ std::unique_ptr<IIncomeStationsPredictor> IncomeStationsPredictorFactory::make(
 		dynamicFrameSettings,
 		frameCalculator,
 		std::move(config));
+}
+
+std::unique_ptr<IIncomeStationsPredictor> IncomeStationsPredictorFactory::make(
+	std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
+	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings)
+{
+	return std::make_unique<CogorthyIncomeStationsPredictor>(
+		incomeLoadEstimator,
+		dynamicFrameSettings);
 }
 
 } // namespace starTopologyEmulator
