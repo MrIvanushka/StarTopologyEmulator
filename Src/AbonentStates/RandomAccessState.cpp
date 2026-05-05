@@ -35,11 +35,24 @@ void RandomAccessState::onUpdate()
 
 		_context->transmitStatus = StationContext::TryingToSend;
 	}
+
 	if (moment.slotNumber >= plan->randomAccessSlotsCountInFrame())
-	{
 		return;
+
+	if (!_decisionMade || moment.frameNumber != _decisionFrame)
+	{
+		_decisionFrame = moment.frameNumber;
+		_decisionMade = true;
+		planFrameAttempt(plan);
 	}
-	implementBackoffLogic(plan);
+
+	if (_chosenSlot >= 0
+		&& static_cast<int>(moment.slotNumber) == _chosenSlot
+		&& _context->transmitStatus == StationContext::TryingToSend)
+	{
+		_chosenSlot = -1;
+		transmit();
+	}
 }
 
 void RandomAccessState::handleCollision(std::shared_ptr<StarHubPlanMessage> plan)
@@ -59,19 +72,29 @@ void RandomAccessState::handleCollision(std::shared_ptr<StarHubPlanMessage> plan
 	_context->backoffRemaining = dist(*_context->rng);
 }
 
-void RandomAccessState::implementBackoffLogic(std::shared_ptr<StarHubPlanMessage> plan)
+void RandomAccessState::planFrameAttempt(std::shared_ptr<StarHubPlanMessage> plan)
 {
+	_chosenSlot = -1;
+
+	if (_context->transmitStatus != StationContext::TryingToSend)
+		return;
+
 	if (_context->backoffRemaining > 0)
 	{
 		_context->backoffRemaining -= 1;
 		return;
 	}
-	std::uniform_real_distribution<double> dist(0.0, 1.0);
 
-	if (dist(*_context->rng) > plan->backoff().pTx)
+	std::uniform_real_distribution<double> coin(0.0, 1.0);
+	if (coin(*_context->rng) >= plan->backoff().pTx)
 		return;
 
-	transmit();
+	const std::uint8_t raSlots = plan->randomAccessSlotsCountInFrame();
+	if (raSlots == 0)
+		return;
+
+	std::uniform_int_distribution<int> slotDist(0, static_cast<int>(raSlots) - 1);
+	_chosenSlot = slotDist(*_context->rng);
 }
 
 void RandomAccessState::transmit()
