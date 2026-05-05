@@ -16,7 +16,9 @@ namespace starTopologyEmulator
 class STAR_TOPOLOGY_EMULATOR_LIB_EXPORT IncomeLoadControllerFactory
 {
 public:
-    static std::unique_ptr<IIncomeLoadController> make(StarHubPlanMessage::BackoffConfig&&);
+    static std::unique_ptr<IIncomeLoadController> make(
+            std::shared_ptr<IIncomeStationsPredictor> predictor, 
+            StarHubPlanMessage::BackoffConfig&&);
 
     static std::unique_ptr<IIncomeLoadController> make(
         std::shared_ptr<IDynamicFrameSettings>,

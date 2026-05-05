@@ -15,6 +15,13 @@ namespace starTopologyEmulator
 
 struct StationContext
 {
+	enum TransitStatus
+	{
+		WaitingForAcq,
+		ReceivedAcq,
+		TryingToSend
+	};
+
 	std::unique_ptr<IFrameCalculator> frameCalculator;
 	std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings;
 
@@ -25,7 +32,7 @@ struct StationContext
 	int attempts = 0;
 	int backoffRemaining = 0;
 
-	bool waitingForAck = false;
+	TransitStatus transmitStatus = TryingToSend;
 	Timestamp lastSendTime = 0;
 	Timestamp ackTimeout = 0;
 

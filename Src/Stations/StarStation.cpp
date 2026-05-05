@@ -51,9 +51,9 @@ void StarStation::handleMessage(std::shared_ptr<IMessage> msg, Timestamp timesta
 	else if (msg->type() == MessageType::StarHubAccess)
 	{
 		auto ack = std::static_pointer_cast<StarHubAccessMessage>(msg);
-		if (ack->stationID() == _context->id && _context->waitingForAck)
+		if (ack->stationID() == _context->id && _context->transmitStatus == StationContext::WaitingForAcq)
 		{
-			_context->waitingForAck = false;
+			_context->transmitStatus = StationContext::ReceivedAcq;
 			_context->backoffRemaining = 0;
 			_context->attempts = 0;
 			++_context->messagesDelivered;

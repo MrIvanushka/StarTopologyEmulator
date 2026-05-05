@@ -28,11 +28,12 @@ void RandomAccessState::onUpdate()
 	_lastProcessedFrame = moment.frameNumber;
 	_lastProcessedSlot = moment.slotNumber;
 
-	if (_context->waitingForAck)
+	if (_context->now - _context->lastSendTime >= _context->ackTimeout && _context->transmitStatus != StationContext::TryingToSend)
 	{
-		if (_context->now - _context->lastSendTime >= _context->ackTimeout)
+		if (_context->transmitStatus == StationContext::WaitingForAcq)
 			handleCollision(plan);
-		return;
+
+		_context->transmitStatus = StationContext::TryingToSend;
 	}
 	if (moment.slotNumber >= plan->randomAccessSlotsCountInFrame())
 	{
@@ -43,7 +44,6 @@ void RandomAccessState::onUpdate()
 
 void RandomAccessState::handleCollision(std::shared_ptr<StarHubPlanMessage> plan)
 {
-	_context->waitingForAck = false;
 	_context->attempts++;
 
 	const auto& cfg = plan->backoff();
@@ -78,7 +78,7 @@ void RandomAccessState::transmit()
 {
 	_context->sendFunc(_context->now, std::make_shared<StarStationMessage>(_context->id));
 	_context->lastSendTime = _context->now;
-	_context->waitingForAck = true;
+	_context->transmitStatus = StationContext::WaitingForAcq;
 }
 
 } // namespace starTopologyEmulator

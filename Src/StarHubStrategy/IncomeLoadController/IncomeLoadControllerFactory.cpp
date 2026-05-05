@@ -8,9 +8,11 @@
 namespace starTopologyEmulator
 {
 
-std::unique_ptr<IIncomeLoadController> IncomeLoadControllerFactory::make(StarHubPlanMessage::BackoffConfig&& config)
+std::unique_ptr<IIncomeLoadController> IncomeLoadControllerFactory::make(
+	std::shared_ptr<IIncomeStationsPredictor> predictor, 
+	StarHubPlanMessage::BackoffConfig&& config)
 {
-	return std::make_unique<StaticIncomeLoadController>(std::move(config));
+	return std::make_unique<StaticIncomeLoadController>(predictor, std::move(config));
 }
 
 std::unique_ptr<IIncomeLoadController> IncomeLoadControllerFactory::make(

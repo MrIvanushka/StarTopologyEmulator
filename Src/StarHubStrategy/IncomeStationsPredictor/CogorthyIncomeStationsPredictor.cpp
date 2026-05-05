@@ -8,7 +8,9 @@ CogorthyIncomeStationsPredictor::CogorthyIncomeStationsPredictor(
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings)
 	: _incomeLoadEstimator(incomeLoadEstimator)
 	, _dynamicFrameSettings(dynamicFrameSettings)
-{}
+{
+	REGISTER_METRIC(_readyUsers, "ќценка числа вход€щих станций");
+}
 
 double CogorthyIncomeStationsPredictor::estimateReadyUsers(
 	std::uint64_t currentFrame,
@@ -19,15 +21,15 @@ double CogorthyIncomeStationsPredictor::estimateReadyUsers(
 	if (currentFrame < earliestFrame)
 		return 0.0;
 
-	auto res = 0;
+	_readyUsers = 0;
 
 	for (auto i = currentFrame; i > 0; --i)
 	{
 		auto frameImpact = calculateImpact(i, targetFrame, targetFrame - currentFrame);
-		res += frameImpact;
+		_readyUsers += frameImpact;
 
 		if (frameImpact < 0.01)
-			return res;
+			return _readyUsers;
 	}
 }
 

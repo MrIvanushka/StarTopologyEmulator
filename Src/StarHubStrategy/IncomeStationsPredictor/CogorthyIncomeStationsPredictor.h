@@ -14,6 +14,7 @@ namespace starTopologyEmulator
 
 class CogorthyIncomeStationsPredictor : public IIncomeStationsPredictor
 {
+	DECLARE_METRICS("Когортный предсказатель входящих станций")
 public:
 	explicit CogorthyIncomeStationsPredictor(
 		std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
@@ -31,6 +32,8 @@ private:
 	std::unordered_map<std::uint64_t, double> _incomeLoadHistory;
 	std::shared_ptr<IIncomeLoadEstimator> _incomeLoadEstimator;
 	std::shared_ptr<IDynamicFrameSettings> _dynamicFrameSettings;
+
+	double _readyUsers = 0;
 };
 
 } // namespace starTopologyEmulator
