@@ -2,8 +2,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <utility>
-#include <vector>
 
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadController.h"
@@ -29,41 +27,7 @@ public:
 private:
 	double clampProbability(double value) const;
 
-	std::uint32_t clampBackoff(std::uint32_t value) const;
-
-	double backoffEligibilityFactor(std::uint32_t windowFrames) const;
-
-	double effectiveAggressiveness(
-		double txProbability,
-		std::uint32_t backoffWindowFrames) const;
-
-	double predictLoadUnderCommand(
-		double predictedReadyUsers,
-		std::uint64_t raSlots,
-		double txProbability,
-		std::uint32_t backoffWindowFrames) const;
-
-	double successPerSlotSa(double g) const;
-
-	double collisionProbabilitySa(double g) const;
-
-	double predictedDelayFrames(
-		double predictedReadyUsers,
-		std::uint64_t raSlots,
-		double txProbability,
-		std::uint32_t backoffWindowFrames) const;
-
-	double utility(
-		double predictedReadyUsers,
-		std::uint64_t raSlots,
-		double txProbability,
-		std::uint32_t backoffWindowFrames) const;
-
-	double smoothProbability(double current, double target) const;
-
-	std::uint32_t smoothBackoff(std::uint32_t current, std::uint32_t target) const;
-
-	std::vector<std::uint32_t> candidateBackoffWindows(std::uint32_t current) const;
+	double utilityGradient(double txProbability, double estimatedStations) const;
 
 private:
 	const SimpleMarginalUtilityBasedLoadControllerConfig _config;

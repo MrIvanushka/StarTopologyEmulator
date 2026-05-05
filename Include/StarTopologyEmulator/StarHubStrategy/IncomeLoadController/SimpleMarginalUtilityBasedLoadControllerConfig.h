@@ -1,47 +1,25 @@
 #pragma once
 
-#include <cstdint>
-#include <vector>
-
 #include "StarTopologyEmulator/StarTopologyEmulatorExport.h"
 
 namespace starTopologyEmulator
 {
 
+// NUM (Network Utility Maximization), СЂР°Р·РґРµР» 2.3.2.5.
+// U(p) = wThroughput * n * p * (1 - p)^(n - 1)
+//      - wCollision  * [1 - (1 - p)^n - n * p * (1 - p)^(n - 1)]
+// p_{i+1} = clip( p_i + sat(eta * dU/dp, +-maxProbabilityStep), pMin, pMax )
 struct STAR_TOPOLOGY_EMULATOR_LIB_EXPORT SimpleMarginalUtilityBasedLoadControllerConfig
 {
-	// Веса исправленной функции полезности:
-	// U = alpha * success - beta * collision - gamma * delayPenalty
-	double alphaSuccess = 1.0;
-	double betaCollision = 1.0;
-	double gammaDelay = 1.0;
+	double weightThroughput = 1.0;
+	double weightCollision  = 1.0;
 
-	// Нормировочный предел по задержке в кадрах.
-	double tMaxFrames = 20.0;
+	double gradientStep = 0.1;
 
-	// Если улучшение полезности меньше этого порога, управление не меняется.
-	double minUtilityGain = 1e-6;
+	double maxProbabilityStep = 0.2;
 
-	// Ограничения и сглаживание вероятности вещания.
-	double minProbability = 0.01;
+	double minProbability = 1e-3;
 	double maxProbability = 1.0;
-	double alphaProbability = 1.0;
-	double maxProbabilityStep = 1.0;
-
-	// Ограничения и сглаживание окна backoff.
-	std::uint32_t minBackoffWindowFrames = 1;
-	std::uint32_t maxBackoffWindowFrames = 256;
-	double alphaBackoff = 1.0;
-	std::uint32_t maxBackoffStepFrames = 256;
-
-	// Шаг перебора вероятности вещания.
-	double probabilityGridStep = 0.05;
-
-	// Набор кандидатов для окна backoff.
-	std::vector<std::uint32_t> backoffCandidates =
-	{
-		1, 2, 4, 8, 16, 32, 64, 128, 256
-	};
 
 	double epsilon = 1e-9;
 };
