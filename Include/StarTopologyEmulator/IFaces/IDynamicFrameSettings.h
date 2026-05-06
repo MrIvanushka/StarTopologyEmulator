@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "StarTopologyEmulator/Messages/OperationPlanMessage.h"
 #include "StarTopologyEmulator/Messages/StarHubPlanMessage.h"
 
 namespace starTopologyEmulator
@@ -14,10 +15,12 @@ public:
 	virtual ~IDynamicFrameSettings() = default;
 
 	virtual void handlePlan(std::shared_ptr<StarHubPlanMessage>) = 0;
+	virtual void handleOperationPlan(std::shared_ptr<OperationPlanMessage>) = 0;
 
 	virtual void clearOutdated(std::uint64_t frame) = 0;
 
 	virtual std::shared_ptr<StarHubPlanMessage> currentPlan(std::uint64_t frame) const = 0;
+	virtual std::shared_ptr<OperationPlanMessage> currentOperationPlan(std::uint64_t frame) const = 0;
 
 	virtual std::uint64_t earliestPlanNumber() const = 0;
 };

@@ -1,6 +1,10 @@
 #pragma once
 
+#include <cstdint>
+#include <memory>
+
 #include "StarTopologyEmulator/StateMachine/State.h"
+#include "Stations/StationContext.h"
 
 namespace starTopologyEmulator
 {
@@ -8,10 +12,14 @@ namespace starTopologyEmulator
 class OperationState final : public State
 {
 public:
-	OperationState(const Transitions&);
+	OperationState(std::shared_ptr<StationContext>, const Transitions&);
 
 private:
-	void onUpdate() override {}
+	void onUpdate() override;
+
+	std::shared_ptr<StationContext> _context;
+
+	std::uint64_t _lastProcessedFrame = 0;
 };
 
 } // namespace starTopologyEmulator

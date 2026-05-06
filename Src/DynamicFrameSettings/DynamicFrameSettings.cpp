@@ -14,6 +14,13 @@ void DynamicFrameSettings::handlePlan(std::shared_ptr<StarHubPlanMessage> messag
 		_plans.pop_front();
 }
 
+void DynamicFrameSettings::handleOperationPlan(std::shared_ptr<OperationPlanMessage> message)
+{
+	_operationPlans.push_back(message);
+	while (_operationPlans.size() > _maxPlansStored)
+		_operationPlans.pop_front();
+}
+
 void DynamicFrameSettings::clearOutdated(std::uint64_t frame)
 {
 	while (!_plans.empty())
@@ -23,11 +30,27 @@ void DynamicFrameSettings::clearOutdated(std::uint64_t frame)
 		else
 			break;
 	}
+	while (!_operationPlans.empty())
+	{
+		if (_operationPlans.front()->frame() < frame)
+			_operationPlans.pop_front();
+		else
+			break;
+	}
 }
 
 std::shared_ptr<StarHubPlanMessage> DynamicFrameSettings::currentPlan(std::uint64_t frame) const
 {
 	for (auto plan : _plans)
+		if (plan->frame() == frame)
+			return plan;
+
+	return nullptr;
+}
+
+std::shared_ptr<OperationPlanMessage> DynamicFrameSettings::currentOperationPlan(std::uint64_t frame) const
+{
+	for (auto plan : _operationPlans)
 		if (plan->frame() == frame)
 			return plan;
 

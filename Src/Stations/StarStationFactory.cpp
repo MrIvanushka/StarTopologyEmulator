@@ -1,5 +1,7 @@
 #include "StarTopologyEmulator/Stations/StarStationFactory.h"
 
+#include "StarTopologyEmulator/TrafficProfile/CbrTrafficProfileConfig.h"
+#include "StarTopologyEmulator/TrafficProfile/TrafficProfileFactory.h"
 #include "Stations/StarStation.h"
 
 namespace starTopologyEmulator
@@ -11,6 +13,7 @@ std::shared_ptr<IStarStation> StarStationFactory::make(StarStationInitData&& ini
 		initData.sendFunc,
 		std::move(initData.frameCalculator),
 		std::move(initData.dynamicFrameSettings),
+		TrafficProfileFactory::make(CbrTrafficProfileConfig{}),
 		initData.id, initData.messagesNeeded,
 		initData.tts, initData.rng);
 }

@@ -1,5 +1,7 @@
 #include "StarHub.h"
 
+#include "StarTopologyEmulator/Messages/BacklogReportMessage.h"
+
 namespace starTopologyEmulator
 {
 
@@ -9,6 +11,7 @@ StarHub::StarHub(
 	std::shared_ptr<IFrameCalculator> frameCalculator,
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	std::unique_ptr<IStarHubStrategy> strategy,
+	std::unique_ptr<IBacklogAccumulator> backlogAccumulator,
 	Timestamp tts)
 	: _sendFunc(std::move(sendFunc))
 	, _incomeLoadEstimator(incomeLoadEstimator)
@@ -16,10 +19,11 @@ StarHub::StarHub(
 	, _dynamicFrameSettings(dynamicFrameSettings)
 	, _strategy(std::move(strategy))
 	, _tts(tts)
+	, _backlogAccumulator(std::move(backlogAccumulator))
 {
 	REGISTER_METRIC_SUBFOLDER(_strategy.get());
 	REGISTER_METRIC_SUBFOLDER(_incomeLoadEstimator.get());
-	REGISTER_METRIC(_pendingAnswers.size(), "Размер очереди ожидания");
+	REGISTER_METRIC(_pendingAnswers.size(), "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
 }
 
 void StarHub::update(Timestamp currentTime)
@@ -35,6 +39,13 @@ void StarHub::update(Timestamp currentTime)
 
 void StarHub::handleMessage(std::shared_ptr<IMessage> msg, Timestamp arrivalTime)
 {
+	if (msg->type() == MessageType::BacklogReport)
+	{
+		_backlogAccumulator->handleReport(
+			std::static_pointer_cast<BacklogReportMessage>(msg));
+		return;
+	}
+
 	FrameMoment handleMoment = _frameCalculator->frameMoment(arrivalTime);
 
 	auto currentPlan = _dynamicFrameSettings->currentPlan(handleMoment.frameNumber);
@@ -71,12 +82,19 @@ void StarHub::onFrameEnd(std::uint64_t frameNumber)
 	auto newPlan = _strategy->generate(frameNumber, targetFrameNumber);
 	_dynamicFrameSettings->handlePlan(newPlan);
 
-	_sendFunc(_frameCalculator->slotBeginTime(frameNumber + 1, 0), newPlan);
+	const Timestamp broadcastTime = _frameCalculator->slotBeginTime(frameNumber + 1, 0);
+	_sendFunc(broadcastTime, newPlan);
+
+	auto operationPlan = _backlogAccumulator->generateOperationPlan(
+		targetFrameNumber,
+		newPlan->onlineSlotsCountInFrame());
+	_sendFunc(broadcastTime, operationPlan);
+
 	_frameAccumulator = RandomAccessFrameResult();
 	auto nextFramePlan = _dynamicFrameSettings->currentPlan(frameNumber + 1);
 	_frameAccumulator.idleSlots = nextFramePlan ? nextFramePlan->randomAccessSlotsCountInFrame() : 0;
 
-	sendAnswersToStations(_frameCalculator->slotBeginTime(frameNumber + 1, 0));
+	sendAnswersToStations(broadcastTime);
 }
 
 void StarHub::sendAnswersToStations(Timestamp sendTime)

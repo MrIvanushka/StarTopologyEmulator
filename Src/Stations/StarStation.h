@@ -4,6 +4,7 @@
 #include <random>
 
 #include "StarTopologyEmulator/IFaces/IStarStation.h"
+#include "StarTopologyEmulator/IFaces/ITrafficProfile.h"
 #include "StarTopologyEmulator/StateMachine/StateMachine.h"
 #include "StationContext.h"
 
@@ -17,6 +18,7 @@ public:
 		std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
 		std::unique_ptr<IFrameCalculator> frameCalculator,
 		std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings,
+		std::unique_ptr<ITrafficProfile> trafficProfile,
 		StationID id,
 		int messagesNeeded,
 		Timestamp tts,
@@ -33,6 +35,8 @@ public:
 	std::optional<Timestamp> joinedTime() const override;
 
 	StationID id() const override;
+
+	void setTrafficProfile(std::unique_ptr<ITrafficProfile>) override;
 
 private:
 	void buildStateMachine();

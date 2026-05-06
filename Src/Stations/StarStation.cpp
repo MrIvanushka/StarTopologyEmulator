@@ -1,5 +1,6 @@
 #include "StarStation.h"
 
+#include "StarTopologyEmulator/Messages/OperationPlanMessage.h"
 #include "StarTopologyEmulator/Messages/StarHubAccessMessage.h"
 #include "AbonentStates/JoinTransition.h"
 #include "AbonentStates/OffState.h"
@@ -13,6 +14,7 @@ StarStation::StarStation(
 	std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
 	std::unique_ptr<IFrameCalculator> frameCalculator,
 	std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings,
+	std::unique_ptr<ITrafficProfile> trafficProfile,
 	StationID id,
 	int messagesNeeded,
 	Timestamp tts,
@@ -24,12 +26,18 @@ StarStation::StarStation(
 	_context->id = id;
 	_context->frameCalculator = std::move(frameCalculator);
 	_context->dynamicFrameSettings = std::move(dynamicFrameSettings);
+	_context->trafficProfile = std::move(trafficProfile);
 	_context->messagesNeeded = messagesNeeded;
 	_context->ackTimeout = 6 * tts;
 	_context->rng = &_rng;
 	_context->sendFunc = std::move(sendFunc);
 
 	buildStateMachine();
+}
+
+void StarStation::setTrafficProfile(std::unique_ptr<ITrafficProfile> profile)
+{
+	_context->trafficProfile = std::move(profile);
 }
 
 void StarStation::update(Timestamp currentTime)
@@ -47,6 +55,11 @@ void StarStation::handleMessage(std::shared_ptr<IMessage> msg, Timestamp timesta
 	{
 		auto plan = std::static_pointer_cast<StarHubPlanMessage>(msg);
 		_context->dynamicFrameSettings->handlePlan(plan);
+	}
+	else if (msg->type() == MessageType::OperationPlan)
+	{
+		auto plan = std::static_pointer_cast<OperationPlanMessage>(msg);
+		_context->dynamicFrameSettings->handleOperationPlan(plan);
 	}
 	else if (msg->type() == MessageType::StarHubAccess)
 	{
@@ -87,7 +100,7 @@ void StarStation::buildStateMachine()
 {
 	State::Transitions emptyTransitions;
 
-	auto joinedState = std::make_shared<OperationState>(emptyTransitions);
+	auto joinedState = std::make_shared<OperationState>(_context, emptyTransitions);
 
 	State::Transitions raTransitions;
 	raTransitions.push_back(

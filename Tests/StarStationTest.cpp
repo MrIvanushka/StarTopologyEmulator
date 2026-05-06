@@ -11,9 +11,13 @@
 #include "Mocks/MockDynamicFrameSettings.h"
 #include "Mocks/MockFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
+#include "StarTopologyEmulator/Messages/BacklogReportMessage.h"
+#include "StarTopologyEmulator/Messages/OperationPlanMessage.h"
 #include "StarTopologyEmulator/Messages/StarHubAccessMessage.h"
 #include "StarTopologyEmulator/Stations/StarStationFactory.h"
 #include "StarTopologyEmulator/TerminalState.h"
+#include "StarTopologyEmulator/TrafficProfile/CbrTrafficProfileConfig.h"
+#include "StarTopologyEmulator/TrafficProfile/TrafficProfileFactory.h"
 
 using namespace starTopologyEmulator;
 using namespace tests;
@@ -42,6 +46,10 @@ struct StationFixture
 	{
 		auto frameCalcOwned = std::make_unique<NiceMock<MockFrameCalculator>>();
 		frameCalc = frameCalcOwned.get();
+		FrameConfig cfg{};
+		cfg.slotCountInFrame = kSlotsPerFrame;
+		cfg.slotDuration = kSlotDuration;
+		ON_CALL(*frameCalc, frameConfig()).WillByDefault(Return(cfg));
 		ON_CALL(*frameCalc, frameMoment(_)).WillByDefault([](Timestamp t) {
 			const auto frameLen = static_cast<Timestamp>(kSlotsPerFrame) * kSlotDuration;
 			FrameMoment fm{};
@@ -148,4 +156,94 @@ TEST(StarStation, ManyUpdatesWithoutPlansAreSafe)
 	for (Timestamp t = 0; t < 5000; t += 25)
 		station->update(t);
 	EXPECT_EQ(station->currentState(), TerminalState::ACQUISITION);
+}
+
+TEST(StarStation, ForwardsOperationPlanToDynamicFrameSettings)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/1, /*messagesNeeded=*/3);
+
+	auto opPlan = std::make_shared<OperationPlanMessage>(
+		/*frame=*/2,
+		std::vector<OperationPlanMessage::StationAllocation>{ {1, 200} });
+	EXPECT_CALL(*fix.dfs, handleOperationPlan(opPlan)).Times(1);
+
+	station->handleMessage(opPlan, 0);
+}
+
+TEST(StarStation, OperationStateEmitsBacklogReportOnFrameTransition)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/3, /*messagesNeeded=*/0, /*tts=*/0);
+
+	CbrTrafficProfileConfig cfg;
+	cfg.bitsPerTimestamp = 1.0; // 1000 bits per 1000-tick frame.
+	station->setTrafficProfile(TrafficProfileFactory::make(cfg));
+
+	station->update(0);    // RA -> OperationState transition.
+	station->update(1000); // First OperationState tick at frame 1.
+
+	std::shared_ptr<BacklogReportMessage> report;
+	for (auto& [_, m] : fix.sent)
+		if (m->type() == MessageType::BacklogReport)
+			report = std::static_pointer_cast<BacklogReportMessage>(m);
+
+	ASSERT_NE(report, nullptr);
+	EXPECT_EQ(report->stationID(), 3u);
+	EXPECT_EQ(report->backlogBits(), 1000u);
+}
+
+TEST(StarStation, OperationPlanReducesReportedBacklog)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/3, /*messagesNeeded=*/0, /*tts=*/0);
+
+	CbrTrafficProfileConfig cfg;
+	cfg.bitsPerTimestamp = 1.0;
+	station->setTrafficProfile(TrafficProfileFactory::make(cfg));
+
+	auto plan = std::make_shared<OperationPlanMessage>(
+		/*frame=*/1,
+		std::vector<OperationPlanMessage::StationAllocation>{ {3, 600} });
+	ON_CALL(*fix.dfs, currentOperationPlan(1)).WillByDefault(Return(plan));
+
+	station->update(0);
+	station->update(1000);
+
+	std::shared_ptr<BacklogReportMessage> report;
+	for (auto& [_, m] : fix.sent)
+		if (m->type() == MessageType::BacklogReport)
+			report = std::static_pointer_cast<BacklogReportMessage>(m);
+
+	ASSERT_NE(report, nullptr);
+	EXPECT_EQ(report->backlogBits(), 400u); // 1000 arrived - 600 sent.
+}
+
+TEST(StarStation, SetTrafficProfileReplacesOldProfile)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/3, /*messagesNeeded=*/0, /*tts=*/0);
+
+	CbrTrafficProfileConfig fast;
+	fast.bitsPerTimestamp = 2.0;
+	station->setTrafficProfile(TrafficProfileFactory::make(fast));
+
+	station->update(0);
+	station->update(1000); // Frame 1 with the fast profile -> 2000 bits accrued.
+
+	// Switch to a slow profile mid-run.
+	CbrTrafficProfileConfig slow;
+	slow.bitsPerTimestamp = 0.5;
+	station->setTrafficProfile(TrafficProfileFactory::make(slow));
+
+	station->update(2000); // Frame 2 with the slow profile -> 500 more bits.
+
+	std::vector<std::shared_ptr<BacklogReportMessage>> reports;
+	for (auto& [_, m] : fix.sent)
+		if (m->type() == MessageType::BacklogReport)
+			reports.push_back(std::static_pointer_cast<BacklogReportMessage>(m));
+
+	ASSERT_EQ(reports.size(), 2u);
+	EXPECT_EQ(reports[0]->backlogBits(), 2000u);
+	EXPECT_EQ(reports[1]->backlogBits(), 2500u);
 }

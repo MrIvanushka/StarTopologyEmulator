@@ -21,11 +21,11 @@ Emulator::Emulator(
 	_hub = hubFactory(makeHubSendFunc());
 
 	REGISTER_METRIC_SUBFOLDER(_hub.get());
-	REGISTER_METRIC(stationsCountOnState(TerminalState::OPERATION), "Количество вошедших в сеть станций");
-	REGISTER_METRIC(stationsCountOnState(TerminalState::ACQUISITION), "Входящие станции");
-	REGISTER_METRIC(stationsCountOnState(TerminalState::OFF), "Остановленные станции");
-	REGISTER_METRIC(_previousFrameIncomeLoad, "Реальная входная нагрузка");
-	REGISTER_METRIC(_previousFramePlr, "Реальный PLR");
+	REGISTER_METRIC(stationsCountOnState(TerminalState::OPERATION), "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
+	REGISTER_METRIC(stationsCountOnState(TerminalState::ACQUISITION), "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
+	REGISTER_METRIC(stationsCountOnState(TerminalState::OFF), "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
+	REGISTER_METRIC(_previousFrameIncomeLoad, "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
+	REGISTER_METRIC(_previousFramePlr, "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ PLR");
 }
 
 std::function<void(Emulator::Timestamp, std::shared_ptr<IMessage>)> Emulator::makeHubSendFunc()
@@ -124,6 +124,12 @@ void Emulator::updateUplink(Timestamp now, const std::vector<QueuedMessage>& rel
 	{
 		if (message.direction != Direction::ToHub)
 			continue;
+
+		if (message.msg->isCollisionImmune())
+		{
+			_hub->handleMessage(message.msg, message.deliveryTime);
+			continue;
+		}
 
 		msgs[message.deliveryTime].push_back(message.msg);
 	}

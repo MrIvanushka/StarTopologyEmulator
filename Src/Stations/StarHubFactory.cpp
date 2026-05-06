@@ -13,6 +13,7 @@ std::shared_ptr<IStarHub> StarHubFactory::make(StarHubInitData&& initData)
 		initData.frameCalculator,
 		initData.dynamicFrameSettings,
 		std::move(initData.strategy),
+		std::move(initData.backlogAccumulator),
 		initData.tts);
 }
 

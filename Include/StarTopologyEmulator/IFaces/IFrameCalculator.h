@@ -17,6 +17,7 @@ struct FrameConfig
 	std::uint64_t slotCountInFrame;
 	Timestamp slotDuration;
 	Timestamp epoch;
+	std::uint64_t bitsPerSlot = 0;
 };
 
 class IFrameCalculator

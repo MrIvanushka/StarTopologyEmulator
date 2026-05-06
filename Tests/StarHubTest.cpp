@@ -7,12 +7,15 @@
 #include <gtest/gtest.h>
 
 #include "Helpers.h"
+#include "Mocks/MockBacklogAccumulator.h"
 #include "Mocks/MockDynamicFrameSettings.h"
 #include "Mocks/MockFrameCalculator.h"
 #include "Mocks/MockIncomeLoadEstimator.h"
 #include "Mocks/MockStarHubStrategy.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IStarHub.h"
+#include "StarTopologyEmulator/Messages/BacklogReportMessage.h"
+#include "StarTopologyEmulator/Messages/OperationPlanMessage.h"
 #include "StarTopologyEmulator/Messages/StarHubAccessMessage.h"
 #include "StarTopologyEmulator/Messages/StarStationMessage.h"
 #include "StarTopologyEmulator/Stations/StarHubFactory.h"
@@ -38,6 +41,7 @@ struct HubFixture
 	std::shared_ptr<NiceMock<MockFrameCalculator>> frameCalc;
 	std::shared_ptr<NiceMock<MockDynamicFrameSettings>> dfs;
 	NiceMock<MockStarHubStrategy>* strategy = nullptr;
+	NiceMock<MockBacklogAccumulator>* backlogAccumulator = nullptr;
 
 	std::shared_ptr<IStarHub> makeHub(Timestamp tts = 0)
 	{
@@ -74,6 +78,15 @@ struct HubFixture
 				return makePlan(target);
 			});
 
+		auto accOwned = std::make_unique<NiceMock<MockBacklogAccumulator>>();
+		backlogAccumulator = accOwned.get();
+		ON_CALL(*backlogAccumulator, generateOperationPlan(_, _)).WillByDefault(
+			[](std::uint64_t frame, std::uint64_t /*slots*/) {
+				return std::make_shared<OperationPlanMessage>(
+					frame,
+					std::vector<OperationPlanMessage::StationAllocation>{});
+			});
+
 		StarHubInitData init{
 			.sendFunc = [this](Timestamp t, std::shared_ptr<IMessage> m) {
 				sent.emplace_back(t, std::move(m));
@@ -82,6 +95,7 @@ struct HubFixture
 			.frameCalculator = frameCalc,
 			.dynamicFrameSettings = dfs,
 			.strategy = std::move(strategyOwned),
+			.backlogAccumulator = std::move(accOwned),
 			.tts = tts,
 		};
 		return StarHubFactory::make(std::move(init));
@@ -179,4 +193,50 @@ TEST(StarHub, MultipleFrameUpdatesProduceMultiplePlans)
 			++planCount;
 
 	EXPECT_GE(planCount, 3u);
+}
+
+TEST(StarHub, BacklogReportIsForwardedToAccumulator)
+{
+	HubFixture fix;
+	auto hub = fix.makeHub();
+
+	auto report = std::make_shared<BacklogReportMessage>(/*id=*/5, /*bits=*/777);
+	EXPECT_CALL(*fix.backlogAccumulator, handleReport(report)).Times(1);
+
+	hub->handleMessage(report, /*arrivalTime=*/0);
+}
+
+TEST(StarHub, OnFrameEndQueriesAccumulatorWithTargetFrameAndOnlineSlots)
+{
+	HubFixture fix;
+	auto hub = fix.makeHub();
+
+	auto strategyPlan = std::make_shared<StarHubPlanMessage>(
+		/*frame=*/2,
+		StarHubPlanMessage::FtpConfig{ /*online=*/12, /*yellow=*/0, /*ra=*/5 },
+		StarHubPlanMessage::BackoffConfig{});
+	ON_CALL(*fix.strategy, generate(_, _)).WillByDefault(Return(strategyPlan));
+
+	EXPECT_CALL(*fix.backlogAccumulator, generateOperationPlan(/*frame=*/2u, /*slots=*/12u))
+		.Times(1)
+		.WillOnce(Return(std::make_shared<OperationPlanMessage>(
+			2,
+			std::vector<OperationPlanMessage::StationAllocation>{})));
+
+	hub->update(HubFixture::framesToTime(1));
+}
+
+TEST(StarHub, OperationPlanIsBroadcastAlongsideHubPlan)
+{
+	HubFixture fix;
+	auto hub = fix.makeHub();
+
+	hub->update(HubFixture::framesToTime(1));
+
+	bool foundOpPlan = false;
+	for (const auto& [t, m] : fix.sent)
+		if (m->type() == MessageType::OperationPlan)
+			foundOpPlan = true;
+
+	EXPECT_TRUE(foundOpPlan);
 }

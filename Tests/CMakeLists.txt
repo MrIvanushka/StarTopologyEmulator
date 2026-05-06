@@ -17,6 +17,7 @@ enable_testing()
 
 set(TEST_SOURCES
 	Helpers.h
+	Mocks/MockBacklogAccumulator.h
 	Mocks/MockDynamicFrameSettings.h
 	Mocks/MockFrameCalculator.h
 	Mocks/MockFtpGenerator.h
@@ -26,6 +27,7 @@ set(TEST_SOURCES
 	Mocks/MockStarHub.h
 	Mocks/MockStarHubStrategy.h
 	Mocks/MockStarStation.h
+	BacklogAccumulatorTest.cpp
 	DynamicFrameSettingsTest.cpp
 	FrameCalculatorsTest.cpp
 	IncomeLoadEstimatorsTest.cpp
@@ -36,6 +38,7 @@ set(TEST_SOURCES
 	StarStationTest.cpp
 	StarHubTest.cpp
 	EmulatorTest.cpp
+	TrafficProfileTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${TEST_SOURCES})

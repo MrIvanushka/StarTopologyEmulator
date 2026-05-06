@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "StarTopologyEmulator/CommonTypedefs.h"
+#include "StarTopologyEmulator/IFaces/IBacklogAccumulator.h"
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
@@ -21,6 +22,7 @@ struct STAR_TOPOLOGY_EMULATOR_LIB_EXPORT StarHubInitData
 	std::shared_ptr<IFrameCalculator> frameCalculator;
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings;
 	std::unique_ptr<IStarHubStrategy> strategy;
+	std::unique_ptr<IBacklogAccumulator> backlogAccumulator;
 	Timestamp tts = 100;
 };
 

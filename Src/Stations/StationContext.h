@@ -8,6 +8,7 @@
 #include "StarTopologyEmulator/CommonTypedefs.h"
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
+#include "StarTopologyEmulator/IFaces/ITrafficProfile.h"
 #include "StarTopologyEmulator/Messages/StarHubPlanMessage.h"
 
 namespace starTopologyEmulator
@@ -24,6 +25,7 @@ struct StationContext
 
 	std::unique_ptr<IFrameCalculator> frameCalculator;
 	std::unique_ptr<IDynamicFrameSettings> dynamicFrameSettings;
+	std::unique_ptr<ITrafficProfile> trafficProfile;
 
 	StationID id = 0;
 
@@ -42,6 +44,9 @@ struct StationContext
 	std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc;
 
 	std::optional<Timestamp> joinedTime;
+
+	// Operation phase state.
+	std::uint64_t backlogBits = 0;
 };
 
 } // namespace starTopologyEmulator

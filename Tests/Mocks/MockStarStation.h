@@ -8,6 +8,7 @@
 #include "StarTopologyEmulator/CommonTypedefs.h"
 #include "StarTopologyEmulator/IFaces/IMessage.h"
 #include "StarTopologyEmulator/IFaces/IStarStation.h"
+#include "StarTopologyEmulator/IFaces/ITrafficProfile.h"
 #include "StarTopologyEmulator/TerminalState.h"
 
 namespace tests
@@ -24,6 +25,8 @@ public:
 	MOCK_METHOD(starTopologyEmulator::TerminalState, currentState, (), (const, override));
 	MOCK_METHOD((std::optional<starTopologyEmulator::Timestamp>), joinedTime, (), (const, override));
 	MOCK_METHOD(starTopologyEmulator::StationID, id, (), (const, override));
+	MOCK_METHOD(void, setTrafficProfile,
+		(std::unique_ptr<starTopologyEmulator::ITrafficProfile>), (override));
 };
 
 } // namespace tests

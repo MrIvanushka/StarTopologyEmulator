@@ -14,12 +14,14 @@ using namespace starTopologyEmulator;
 inline FrameConfig makeFrameConfig(
 	std::uint64_t slotCountInFrame = 10,
 	Timestamp slotDuration = 100,
-	Timestamp epoch = 0)
+	Timestamp epoch = 0,
+	std::uint64_t bitsPerSlot = 0)
 {
 	FrameConfig fc{};
 	fc.slotCountInFrame = slotCountInFrame;
 	fc.slotDuration = slotDuration;
 	fc.epoch = epoch;
+	fc.bitsPerSlot = bitsPerSlot;
 	return fc;
 }
 
