@@ -11,9 +11,7 @@ namespace starTopologyEmulator
 class RandomAccessState final : public State
 {
 public:
-	RandomAccessState(
-		std::shared_ptr<StationContext>,
-		const Transitions&);
+	RandomAccessState(std::shared_ptr<StationContext>);
 
 private:
 	void onUpdate() override;

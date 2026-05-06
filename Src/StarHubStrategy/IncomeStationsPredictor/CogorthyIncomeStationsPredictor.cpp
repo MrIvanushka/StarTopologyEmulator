@@ -12,7 +12,7 @@ CogorthyIncomeStationsPredictor::CogorthyIncomeStationsPredictor(
 	: _incomeLoadEstimator(incomeLoadEstimator)
 	, _dynamicFrameSettings(dynamicFrameSettings)
 {
-	REGISTER_METRIC(_readyUsers, "Готовые станции входящих данных");
+	REGISTER_METRIC(_readyUsers, "Оценка числа входящих станций");
 }
 
 double CogorthyIncomeStationsPredictor::estimateReadyUsers(

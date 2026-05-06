@@ -3,6 +3,7 @@
 #include "StarTopologyEmulator/Messages/OperationPlanMessage.h"
 #include "StarTopologyEmulator/Messages/StarHubAccessMessage.h"
 #include "AbonentStates/JoinTransition.h"
+#include "AbonentStates/SwitchEnabledTransition.h"
 #include "AbonentStates/OffState.h"
 #include "AbonentStates/OperationState.h"
 #include "AbonentStates/RandomAccessState.h"
@@ -74,6 +75,34 @@ void StarStation::handleMessage(std::shared_ptr<IMessage> msg, Timestamp timesta
 	}
 }
 
+void StarStation::setEnabled(bool value)
+{
+	_context->enabled = value;
+}
+
+void StarStation::buildStateMachine()
+{
+	State::Transitions emptyTransitions;
+
+	auto offState = std::make_shared<OffState>();
+	auto raState = std::make_shared<RandomAccessState>(_context);
+	auto operationState = std::make_shared<OperationState>(_context);
+
+	offState->setupTransitions({
+		std::make_shared<SwitchEnabledTransition>(_context, raState.get(), true)
+	});
+	raState->setupTransitions({
+		std::make_shared<SwitchEnabledTransition>(_context, offState.get(), false),
+		std::make_shared<JoinTransition>(_context, operationState.get())
+	});
+	operationState->setupTransitions({
+		std::make_shared<SwitchEnabledTransition>(_context, offState.get(), false)
+	});
+
+	std::vector<std::shared_ptr<IState>> allStates = { offState, raState, operationState };
+	_stateMachine = std::make_unique<StateMachine>(allStates);
+}
+
 Timestamp StarStation::tts() const
 {
 	return _tts;
@@ -94,25 +123,6 @@ std::optional<Timestamp> StarStation::joinedTime() const
 std::uint32_t StarStation::id() const
 {
 	return _context->id;
-}
-
-void StarStation::buildStateMachine()
-{
-	State::Transitions emptyTransitions;
-
-	auto joinedState = std::make_shared<OperationState>(_context, emptyTransitions);
-
-	State::Transitions raTransitions;
-	raTransitions.push_back(
-	std::make_shared<JoinTransition>(_context, joinedState.get()));
-
-	auto raState = std::make_shared<RandomAccessState>(_context, raTransitions);
-
-	std::vector<std::shared_ptr<IState>> allStates;
-	allStates.push_back(raState);
-	allStates.push_back(joinedState);
-
-	_stateMachine = std::make_unique<StateMachine>(allStates);
 }
 
 } // namespace starTopologyEmulator

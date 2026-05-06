@@ -28,6 +28,7 @@ struct StationContext
 	std::unique_ptr<ITrafficProfile> trafficProfile;
 
 	StationID id = 0;
+	bool enabled = true;
 
 	int messagesNeeded = 0;
 	int messagesDelivered = 0;

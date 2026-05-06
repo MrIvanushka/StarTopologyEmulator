@@ -8,10 +8,8 @@
 namespace starTopologyEmulator
 {
 
-OperationState::OperationState(
-	std::shared_ptr<StationContext> context,
-	const Transitions& transitions)
-	: State(transitions, static_cast<Index>(TerminalState::OPERATION))
+OperationState::OperationState(std::shared_ptr<StationContext> context)
+	: State(static_cast<Index>(TerminalState::OPERATION))
 	, _context(std::move(context))
 {
 }

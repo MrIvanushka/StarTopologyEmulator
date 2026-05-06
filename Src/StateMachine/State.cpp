@@ -3,10 +3,14 @@
 namespace starTopologyEmulator
 {
 
-State::State(const Transitions& transitions, Index index)
-	: _transitions(transitions)
-	, _index(index)
+State::State(Index index)
+	: _index(index)
 {}
+
+void State::setupTransitions(Transitions&& transitions)
+{
+	_transitions = std::move(transitions);
+}
 
 State::NextStatePtr State::update()
 {

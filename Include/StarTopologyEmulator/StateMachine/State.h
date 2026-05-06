@@ -15,9 +15,11 @@ class STAR_TOPOLOGY_EMULATOR_LIB_EXPORT State : public IState
 public:
 	using Transitions = std::vector<std::shared_ptr<ITransition>>;
 
-	State(const Transitions& transitions, Index index);
+	State(Index index);
 
 	NextStatePtr update() override;
+
+	void setupTransitions(Transitions&&) override;
 
 	Index index() const override { return _index; }
 private:

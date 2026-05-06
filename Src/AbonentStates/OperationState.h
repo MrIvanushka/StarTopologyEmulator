@@ -12,7 +12,7 @@ namespace starTopologyEmulator
 class OperationState final : public State
 {
 public:
-	OperationState(std::shared_ptr<StationContext>, const Transitions&);
+	OperationState(std::shared_ptr<StationContext>);
 
 private:
 	void onUpdate() override;

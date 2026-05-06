@@ -28,6 +28,10 @@ public:
 
 	void handleMessage(std::shared_ptr<IMessage>, Timestamp) override;
 
+	void setEnabled(bool) override;
+
+	void setTrafficProfile(std::unique_ptr<ITrafficProfile>) override;
+
 	Timestamp tts() const override;
 
 	TerminalState currentState() const override;
@@ -35,9 +39,6 @@ public:
 	std::optional<Timestamp> joinedTime() const override;
 
 	StationID id() const override;
-
-	void setTrafficProfile(std::unique_ptr<ITrafficProfile>) override;
-
 private:
 	void buildStateMachine();
 

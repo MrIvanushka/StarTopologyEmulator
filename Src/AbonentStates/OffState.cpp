@@ -5,8 +5,8 @@
 namespace starTopologyEmulator
 {
 
-OffState::OffState(const Transitions& transitions)
-	: State(transitions, static_cast<Index>(TerminalState::OFF))
+OffState::OffState()
+	: State(static_cast<Index>(TerminalState::OFF))
 {}
 
 

@@ -6,10 +6,8 @@
 namespace starTopologyEmulator
 {
 
-RandomAccessState::RandomAccessState(
-	std::shared_ptr<StationContext> context,
-	const Transitions& transitions)
-	: State(transitions, static_cast<IState::Index>(TerminalState::ACQUISITION))
+RandomAccessState::RandomAccessState(std::shared_ptr<StationContext> context)
+	: State(static_cast<IState::Index>(TerminalState::ACQUISITION))
 	, _context(context)
 {}
 

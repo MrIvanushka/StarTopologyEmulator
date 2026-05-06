@@ -27,6 +27,7 @@ public:
 	MOCK_METHOD(starTopologyEmulator::StationID, id, (), (const, override));
 	MOCK_METHOD(void, setTrafficProfile,
 		(std::unique_ptr<starTopologyEmulator::ITrafficProfile>), (override));
+	MOCK_METHOD(void, setEnabled, (bool), (override));
 };
 
 } // namespace tests

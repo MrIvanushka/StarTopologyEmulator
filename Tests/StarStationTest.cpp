@@ -94,20 +94,22 @@ TEST(StarStation, ReportsConfiguredIdentity)
 	EXPECT_EQ(station->tts(), 77);
 }
 
-TEST(StarStation, InitialStateIsAcquisitionAndJoinedTimeIsEmpty)
+TEST(StarStation, EntersAcquisitionAfterFirstUpdateAndJoinedTimeIsEmpty)
 {
 	StationFixture fix;
 	auto station = fix.makeStation();
+	station->update(0); // OFF -> ACQUISITION on the first tick.
 	EXPECT_EQ(station->currentState(), TerminalState::ACQUISITION);
 	EXPECT_FALSE(station->joinedTime().has_value());
 }
 
-TEST(StarStation, ZeroMessagesNeededTransitionsToOperationOnFirstUpdate)
+TEST(StarStation, ZeroMessagesNeededTransitionsToOperationAfterStartup)
 {
 	StationFixture fix;
 	auto station = fix.makeStation(/*id=*/1, /*messagesNeeded=*/0);
 
-	station->update(/*currentTime=*/250);
+	station->update(/*currentTime=*/0);   // OFF -> ACQUISITION.
+	station->update(/*currentTime=*/250); // ACQUISITION -> OPERATION.
 
 	EXPECT_EQ(station->currentState(), TerminalState::OPERATION);
 	ASSERT_TRUE(station->joinedTime().has_value());
@@ -180,7 +182,8 @@ TEST(StarStation, OperationStateEmitsBacklogReportOnFrameTransition)
 	cfg.bitsPerTimestamp = 1.0; // 1000 bits per 1000-tick frame.
 	station->setTrafficProfile(TrafficProfileFactory::make(cfg));
 
-	station->update(0);    // RA -> OperationState transition.
+	station->update(0);    // OFF -> RandomAccessState.
+	station->update(1);    // RA -> OperationState transition.
 	station->update(1000); // First OperationState tick at frame 1.
 
 	std::shared_ptr<BacklogReportMessage> report;
@@ -207,8 +210,9 @@ TEST(StarStation, OperationPlanReducesReportedBacklog)
 		std::vector<OperationPlanMessage::StationAllocation>{ {3, 600} });
 	ON_CALL(*fix.dfs, currentOperationPlan(1)).WillByDefault(Return(plan));
 
-	station->update(0);
-	station->update(1000);
+	station->update(0);    // OFF -> RA.
+	station->update(1);    // RA -> Operation.
+	station->update(1000); // Operation tick at frame 1.
 
 	std::shared_ptr<BacklogReportMessage> report;
 	for (auto& [_, m] : fix.sent)
@@ -228,7 +232,8 @@ TEST(StarStation, SetTrafficProfileReplacesOldProfile)
 	fast.bitsPerTimestamp = 2.0;
 	station->setTrafficProfile(TrafficProfileFactory::make(fast));
 
-	station->update(0);
+	station->update(0);    // OFF -> RA.
+	station->update(1);    // RA -> Operation.
 	station->update(1000); // Frame 1 with the fast profile -> 2000 bits accrued.
 
 	// Switch to a slow profile mid-run.
@@ -246,4 +251,122 @@ TEST(StarStation, SetTrafficProfileReplacesOldProfile)
 	ASSERT_EQ(reports.size(), 2u);
 	EXPECT_EQ(reports[0]->backlogBits(), 2000u);
 	EXPECT_EQ(reports[1]->backlogBits(), 2500u);
+}
+
+TEST(StarStation, SetEnabledFalseDefersTransitionUntilNextUpdate)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/1, /*messagesNeeded=*/3);
+
+	station->update(0);
+	ASSERT_EQ(station->currentState(), TerminalState::ACQUISITION);
+
+	station->setEnabled(false);
+	EXPECT_EQ(station->currentState(), TerminalState::ACQUISITION);
+
+	station->update(100);
+	EXPECT_EQ(station->currentState(), TerminalState::OFF);
+}
+
+TEST(StarStation, SetEnabledFalseFromOperationTransitionsToOff)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/1, /*messagesNeeded=*/0, /*tts=*/0);
+
+	station->update(0);
+	station->update(100);
+	ASSERT_EQ(station->currentState(), TerminalState::OPERATION);
+
+	station->setEnabled(false);
+	EXPECT_EQ(station->currentState(), TerminalState::OPERATION);
+
+	station->update(200);
+	EXPECT_EQ(station->currentState(), TerminalState::OFF);
+}
+
+TEST(StarStation, SetEnabledTrueFromOffTransitionsToAcquisition)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/1, /*messagesNeeded=*/3);
+
+	station->update(0);
+	station->setEnabled(false);
+	station->update(100);
+	ASSERT_EQ(station->currentState(), TerminalState::OFF);
+
+	station->setEnabled(true);
+	EXPECT_EQ(station->currentState(), TerminalState::OFF);
+
+	station->update(200);
+	EXPECT_EQ(station->currentState(), TerminalState::ACQUISITION);
+}
+
+TEST(StarStation, ReenablingAfterOffFromOperationReturnsToAcquisition)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/1, /*messagesNeeded=*/0, /*tts=*/0);
+
+	station->update(0);
+	station->update(100);
+	ASSERT_EQ(station->currentState(), TerminalState::OPERATION);
+
+	station->setEnabled(false);
+	station->update(200);
+	ASSERT_EQ(station->currentState(), TerminalState::OFF);
+
+	station->setEnabled(true);
+	station->update(300);
+	EXPECT_EQ(station->currentState(), TerminalState::ACQUISITION);
+}
+
+TEST(StarStation, DisabledStationStaysOffAcrossManyUpdates)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/1, /*messagesNeeded=*/3);
+
+	station->update(0);
+	station->setEnabled(false);
+	station->update(100);
+	ASSERT_EQ(station->currentState(), TerminalState::OFF);
+
+	for (Timestamp t = 200; t <= 5000; t += 100)
+		station->update(t);
+
+	EXPECT_EQ(station->currentState(), TerminalState::OFF);
+}
+
+TEST(StarStation, SetEnabledFalseWhileAlreadyOffIsNoOp)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/1, /*messagesNeeded=*/3);
+
+	station->update(0);
+	station->setEnabled(false);
+	station->update(100);
+	ASSERT_EQ(station->currentState(), TerminalState::OFF);
+
+	station->setEnabled(false);
+	station->update(200);
+	EXPECT_EQ(station->currentState(), TerminalState::OFF);
+}
+
+TEST(StarStation, RepeatedTogglingFlapsBetweenOffAndAcquisition)
+{
+	StationFixture fix;
+	auto station = fix.makeStation(/*id=*/1, /*messagesNeeded=*/3);
+
+	station->update(0);
+	ASSERT_EQ(station->currentState(), TerminalState::ACQUISITION);
+
+	Timestamp t = 100;
+	for (int i = 0; i < 3; ++i)
+	{
+		station->setEnabled(false);
+		station->update(t); t += 100;
+		EXPECT_EQ(station->currentState(), TerminalState::OFF);
+
+		station->setEnabled(true);
+		station->update(t); t += 100;
+		EXPECT_EQ(station->currentState(), TerminalState::ACQUISITION);
+	}
 }
