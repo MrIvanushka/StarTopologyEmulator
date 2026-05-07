@@ -5,16 +5,19 @@ namespace starTopologyEmulator
 
 CommonStarHubStrategy::CommonStarHubStrategy(
 	std::unique_ptr<IFtpGenerator> ftpGenerator,
-	std::unique_ptr<IIncomeLoadController> incomeLoadController)
+	std::unique_ptr<IIncomeLoadController> incomeLoadController,
+	MetricScope scope)
 	: _ftpGenerator(std::move(ftpGenerator))
 	, _incomeLoadController(std::move(incomeLoadController))
+	, _scope(std::move(scope))
 {
-	REGISTER_METRIC_SUBFOLDER(_ftpGenerator.get());
-	REGISTER_METRIC_SUBFOLDER(_incomeLoadController.get());
-	REGISTER_METRIC(_lastPlan->backoff().baseWindow, "Размер окна backoff");
-	REGISTER_METRIC(_lastPlan->backoff().maxWindow, "Максимальный размер окна backoff");
-	REGISTER_METRIC(_lastPlan->backoff().pTx, "Вероятность занять слот абонентом");
-	REGISTER_METRIC(_lastPlan->randomAccessSlotsCountInFrame(), "Количество слотов случайного доступа");
+	if (_scope.active())
+	{
+		_hBaseWindow = _scope.registerMetric("Р Р°Р·РјРµСЂ РѕРєРЅР° backoff");
+		_hMaxWindow = _scope.registerMetric("РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РѕРєРЅР° backoff");
+		_hPTx = _scope.registerMetric("Р’РµСЂРѕСЏС‚РЅРѕСЃС‚СЊ РІС‹С…РѕРґР° РІ СЌС„РёСЂ СЃС‚Р°РЅС†РёР№");
+		_hRaSlots = _scope.registerMetric("РљРѕР»РёС‡РµСЃС‚РІРѕ СЃР»РѕС‚РѕРІ СЃР»СѓС‡Р°Р№РЅРѕРіРѕ РґРѕСЃС‚СѓРїР°");
+	}
 }
 
 std::shared_ptr<StarHubPlanMessage> CommonStarHubStrategy::generate(std::uint64_t currentFrame, std::uint64_t targetFrame)
@@ -22,6 +25,12 @@ std::shared_ptr<StarHubPlanMessage> CommonStarHubStrategy::generate(std::uint64_
 	auto ftp = _ftpGenerator->generate(targetFrame);
 	auto backoff = _incomeLoadController->generate(ftp.randomAccessSlotsCountInFrame, currentFrame, targetFrame);
 	_lastPlan = std::make_shared<StarHubPlanMessage>(targetFrame, ftp, backoff);
+
+	_scope.emit(_hBaseWindow, targetFrame, static_cast<double>(backoff.baseWindow));
+	_scope.emit(_hMaxWindow, targetFrame, static_cast<double>(backoff.maxWindow));
+	_scope.emit(_hPTx, targetFrame, backoff.pTx);
+	_scope.emit(_hRaSlots, targetFrame, static_cast<double>(ftp.randomAccessSlotsCountInFrame));
+
 	return _lastPlan;
 }
 

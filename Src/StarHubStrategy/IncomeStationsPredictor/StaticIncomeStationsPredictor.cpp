@@ -10,35 +10,37 @@ StaticIncomeStationsPredictor::StaticIncomeStationsPredictor(
 	std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	std::shared_ptr<IFrameCalculator> frameCalculator,
-	StaticIncomeStationsPredictorConfig&& config)
+	StaticIncomeStationsPredictorConfig&& config,
+	MetricScope scope)
 	: _config(std::move(config))
 	, _incomeLoadEstimator(incomeLoadEstimator)
 	, _dynamicFrameSettings(dynamicFrameSettings)
 	, _frameCalculator(frameCalculator)
+	, _scope(std::move(scope))
 {
-	REGISTER_METRIC(_currentEstimationResult, "Îöåíêà êîëè÷åñòâà ñòàíöèé â RA");
+	if (_scope.active())
+		_hReadyUsers = _scope.registerMetric("ÐžÑ†ÐµÐ½ÐºÐ° ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð° ÑÑ‚Ð°Ð½Ñ†Ð¸Ð¹ Ð² RA");
 }
 
 double StaticIncomeStationsPredictor::estimateReadyUsers(
 	std::uint64_t currentFrame,
 	std::uint64_t targetFrame)
 {
-	(void)targetFrame;
-
 	const double currentIncomeLoad = std::max(0.0, _incomeLoadEstimator->incomeLoad());
 	_incomeLoadHistory[currentFrame] = currentIncomeLoad;
 
 	const auto& currentPlan = _dynamicFrameSettings->currentPlan(currentFrame);
 	if (!currentPlan)
 	{
-		_currentEstimationResult = 0.0;
+		_scope.emit(_hReadyUsers, targetFrame, 0.0);
 		return 0.0;
 	}
 
 	const auto readyUsers = historyReadyUsers(currentPlan);
-	_currentEstimationResult = readyUsers.value_or(0.0);
+	const double result = readyUsers.value_or(0.0);
 
-	return _currentEstimationResult;
+	_scope.emit(_hReadyUsers, targetFrame, result);
+	return result;
 }
 
 double StaticIncomeStationsPredictor::clampProbability(double value) const

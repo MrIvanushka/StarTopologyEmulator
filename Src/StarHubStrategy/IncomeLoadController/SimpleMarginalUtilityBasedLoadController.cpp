@@ -9,11 +9,19 @@ namespace starTopologyEmulator
 SimpleMarginalUtilityBasedLoadController::SimpleMarginalUtilityBasedLoadController(
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	std::shared_ptr<IIncomeStationsPredictor> readyUsersPredictor,
-	SimpleMarginalUtilityBasedLoadControllerConfig&& config)
+	SimpleMarginalUtilityBasedLoadControllerConfig&& config,
+	MetricScope scope)
 	: _config(std::move(config))
 	, _dynamicFrameSettings(dynamicFrameSettings)
 	, _readyUsersPredictor(readyUsersPredictor)
-{}
+	, _scope(std::move(scope))
+{
+	if (_scope.active())
+	{
+		_hPTx = _scope.registerMetric("Целевая вероятность вещания");
+		_hBackoff = _scope.registerMetric("Целевое окно backoff");
+	}
+}
 
 StarHubPlanMessage::BackoffConfig SimpleMarginalUtilityBasedLoadController::generate(
 	std::uint64_t /*plannedRaSlots*/,
@@ -39,6 +47,9 @@ StarHubPlanMessage::BackoffConfig SimpleMarginalUtilityBasedLoadController::gene
 	StarHubPlanMessage::BackoffConfig result;
 	result.pTx = clampProbability(currentP + limitedDelta);
 	result.baseWindow = currentBackoff;
+
+	_scope.emit(_hPTx, targetFrame, result.pTx);
+	_scope.emit(_hBackoff, targetFrame, static_cast<double>(result.baseWindow));
 
 	return result;
 }

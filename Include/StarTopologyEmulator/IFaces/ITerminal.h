@@ -3,15 +3,17 @@
 #include <cstdint>
 #include <memory>
 
+#include "StarTopologyEmulator/CommonTypedefs.h"
 #include "StarTopologyEmulator/IFaces/IMessage.h"
-#include "StarTopologyEmulator/IFaces/IMetricProducer.h"
 
 namespace starTopologyEmulator
 {
 
-class ITerminal : public IMetricProducer
+class ITerminal
 {
 public:
+	virtual ~ITerminal() = default;
+
 	virtual void update(Timestamp) = 0;
 
 	virtual void handleMessage(std::shared_ptr<IMessage>, Timestamp) = 0;

@@ -2,12 +2,10 @@
 
 #include <cstdint>
 
-#include "StarTopologyEmulator/IFaces/IMetricProducer.h"
-
 namespace starTopologyEmulator
 {
 
-class IIncomeStationsPredictor : public IMetricProducer
+class IIncomeStationsPredictor
 {
 public:
 	virtual ~IIncomeStationsPredictor() = default;

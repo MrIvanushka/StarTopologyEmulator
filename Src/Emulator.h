@@ -4,19 +4,18 @@
 #include <map>
 #include <memory>
 
-#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IEmulator.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IStarHub.h"
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
 #include "StarTopologyEmulator/IFaces/IStarStation.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 
 namespace starTopologyEmulator
 {
 
 class Emulator : public IEmulator
 {
-	DECLARE_METRICS("Эмулятор СЛС")
 public:
 	using SendFunc = std::function<void(Timestamp, std::shared_ptr<IMessage>)>;
 
@@ -24,13 +23,16 @@ public:
 		std::function<std::shared_ptr<IStarStation>(SendFunc, StationID)>,
 		std::function<std::shared_ptr<IStarHub>(SendFunc)>,
 		std::unique_ptr<IFrameCalculator>,
-		int stationCount);
+		int stationCount,
+		std::shared_ptr<IMetricSink> metricSink = nullptr);
 
 	void update(Timestamp currentTime) override;
 
 	std::shared_ptr<IStarHub> hub() const override;
 
 	const std::vector<std::shared_ptr<IStarStation>>& stations() const override;
+
+	std::shared_ptr<IMetricSink> metricSink() const override;
 private:
 	enum class Direction { ToHub, ToStation };
 
@@ -55,14 +57,14 @@ private:
 		Timestamp sendTime,
 		std::shared_ptr<IMessage> msg);
 
-        void updateDownlink(Timestamp, const std::vector<QueuedMessage>&);
+	void updateDownlink(Timestamp, const std::vector<QueuedMessage>&);
 
-        void updateUplink(Timestamp, const std::vector<QueuedMessage>&);
+	void updateUplink(Timestamp, const std::vector<QueuedMessage>&);
 
 	std::uint32_t stationsCountOnState(TerminalState) const;
 
 private:
-	void storeInputLoadAndPlr();
+	void storeInputLoadAndPlr(std::uint64_t completedFrame);
 
 	std::unique_ptr<IFrameCalculator> _frameCalculator;
 
@@ -72,13 +74,18 @@ private:
 	std::multimap<Timestamp, QueuedMessage> _queue;
 
 	std::uint64_t _lastProcessedFrame{ 0 };
-	double _previousFrameIncomeLoad{ 0 };
-	double _previousFramePlr{ 0 };
 	std::uint64_t _uplinkAttempted{ 0 };
 	std::uint64_t _uplinkOk{ 0 };
 	std::uint64_t _uplinkLost{ 0 };
 	std::uint64_t _uplinkSlotsWithTraffic{ 0 };
+
+	std::shared_ptr<IMetricSink> _metricSink;
+	MetricScope _scope;
+	MetricHandle _hStationsOperation = kInvalidMetricHandle;
+	MetricHandle _hStationsAcquisition = kInvalidMetricHandle;
+	MetricHandle _hStationsOff = kInvalidMetricHandle;
+	MetricHandle _hIncomeLoad = kInvalidMetricHandle;
+	MetricHandle _hPlr = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator
-

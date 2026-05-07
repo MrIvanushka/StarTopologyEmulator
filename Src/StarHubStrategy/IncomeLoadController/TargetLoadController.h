@@ -3,10 +3,10 @@
 #include <memory>
 #include <utility>
 
-#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadController.h"
 #include "StarTopologyEmulator/IFaces/IIncomeStationsPredictor.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 #include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/TargetLoadControllerConfig.h"
 
 namespace starTopologyEmulator
@@ -14,12 +14,12 @@ namespace starTopologyEmulator
 
 class TargetLoadController : public IIncomeLoadController
 {
-	DECLARE_METRICS("Контроллер входной нагрузки");
 public:
-	explicit TargetLoadController(
+	TargetLoadController(
 		std::shared_ptr<IDynamicFrameSettings>,
 		std::shared_ptr<IIncomeStationsPredictor>,
-		TargetLoadControllerConfig&&);
+		TargetLoadControllerConfig&&,
+		MetricScope scope = {});
 
 	StarHubPlanMessage::BackoffConfig generate(
 		std::uint64_t plannedRaSlots,
@@ -64,8 +64,9 @@ private:
 	std::shared_ptr<IDynamicFrameSettings> _dynamicFrameSettings;
 	std::shared_ptr<IIncomeStationsPredictor> _readyUsersPredictor;
 
-	std::shared_ptr<StarHubPlanMessage> _currentPlan;
-	std::shared_ptr<StarHubPlanMessage> _targetPlan;
+	MetricScope _scope;
+	MetricHandle _hPTx = kInvalidMetricHandle;
+	MetricHandle _hBackoff = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

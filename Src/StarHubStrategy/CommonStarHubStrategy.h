@@ -2,10 +2,10 @@
 
 #include <utility>
 
-#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
 #include "StarTopologyEmulator/IFaces/IFtpGenerator.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadController.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 #include "StarTopologyEmulator/StarHubStrategy/StarHubStrategyConfig.h"
 
 namespace starTopologyEmulator
@@ -13,13 +13,13 @@ namespace starTopologyEmulator
 
 class CommonStarHubStrategy : public IStarHubStrategy
 {
-	DECLARE_METRICS("Стратегия случайного доступа")
 public:
 	using Config = StarHubStrategyConfig;
 
 	CommonStarHubStrategy(
 		std::unique_ptr<IFtpGenerator>,
-		std::unique_ptr<IIncomeLoadController>);
+		std::unique_ptr<IIncomeLoadController>,
+		MetricScope scope = {});
 
 	std::shared_ptr<StarHubPlanMessage> generate(std::uint64_t currentFrame, std::uint64_t targetFrame) override;
 private:
@@ -30,6 +30,12 @@ private:
 		0,
 		StarHubPlanMessage::FtpConfig(),
 		StarHubPlanMessage::BackoffConfig());
+
+	MetricScope _scope;
+	MetricHandle _hBaseWindow = kInvalidMetricHandle;
+	MetricHandle _hMaxWindow = kInvalidMetricHandle;
+	MetricHandle _hPTx = kInvalidMetricHandle;
+	MetricHandle _hRaSlots = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

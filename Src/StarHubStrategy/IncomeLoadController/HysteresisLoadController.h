@@ -5,6 +5,7 @@
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadController.h"
 #include "StarTopologyEmulator/IFaces/IIncomeStationsPredictor.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 #include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/HysteresisLoadControllerConfig.h"
 
 namespace starTopologyEmulator
@@ -19,10 +20,11 @@ class HysteresisLoadController : public IIncomeLoadController
 	};
 
 public:
-	explicit HysteresisLoadController(
+	HysteresisLoadController(
 		std::shared_ptr<IDynamicFrameSettings>,
 		std::shared_ptr<IIncomeStationsPredictor>,
-		HysteresisLoadControllerConfig&&);
+		HysteresisLoadControllerConfig&&,
+		MetricScope scope = {});
 
 	StarHubPlanMessage::BackoffConfig generate(
 		std::uint64_t plannedRaSlots,
@@ -61,6 +63,11 @@ private:
 	std::shared_ptr<IIncomeStationsPredictor> _readyUsersPredictor;
 
 	State _state = State::Normal;
+
+	MetricScope _scope;
+	MetricHandle _hPTx = kInvalidMetricHandle;
+	MetricHandle _hBackoff = kInvalidMetricHandle;
+	MetricHandle _hState = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

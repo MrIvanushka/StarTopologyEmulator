@@ -11,7 +11,8 @@ std::unique_ptr<IEmulator> EmulatorFactory::make(EmulatorInitData initData)
 		initData.stationFactory,
 		initData.hubFactory,
 		std::move(initData.frameCalculator),
-		initData.stationCount);
+		initData.stationCount,
+		std::move(initData.metricSink));
 }
 
 } // namespace starTopologyEmulator

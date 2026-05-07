@@ -5,12 +5,14 @@ namespace starTopologyEmulator
 
 StaticIncomeLoadController::StaticIncomeLoadController(
 	std::shared_ptr<IIncomeStationsPredictor> readyUsersPredictor,
-	StarHubPlanMessage::BackoffConfig config)
+	StarHubPlanMessage::BackoffConfig config,
+	MetricScope scope)
 	: _readyUsersPredictor(readyUsersPredictor)
 	, _config(config)
+	, _scope(std::move(scope))
 {
-	REGISTER_METRIC_SUBFOLDER(_readyUsersPredictor.get());
-	REGISTER_METRIC(_config.pTx, "Вероятность вещания");
+	if (_scope.active())
+		_hPTx = _scope.registerMetric("Р’РµСЂРѕСЏС‚РЅРѕСЃС‚СЊ РІРµС‰Р°РЅРёСЏ");
 }
 
 StarHubPlanMessage::BackoffConfig StaticIncomeLoadController::generate(
@@ -19,6 +21,7 @@ StarHubPlanMessage::BackoffConfig StaticIncomeLoadController::generate(
 	std::uint64_t targetFrame)
 {
 	_readyUsersPredictor->estimateReadyUsers(currentFrame, targetFrame);
+	_scope.emit(_hPTx, targetFrame, _config.pTx);
 	return _config;
 }
 

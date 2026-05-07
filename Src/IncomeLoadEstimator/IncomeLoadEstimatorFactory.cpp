@@ -7,16 +7,28 @@
 namespace starTopologyEmulator
 {
 
-std::unique_ptr<IIncomeLoadEstimator> IncomeLoadEstimatorFactory::make(EmaIncomeLoadEstimatorConfig config)
+std::unique_ptr<IIncomeLoadEstimator> IncomeLoadEstimatorFactory::make(
+	EmaIncomeLoadEstimatorConfig config,
+	MetricScope scope)
 {
-	auto instant = std::make_unique<InstantSaIncomeLoadEstimator>(5);
-	return std::make_unique<EmaIncomeLoadEstimator>(std::move(instant), std::move(config));
+	auto instantScope = scope.child("Мгновенный (S-ALOHA)");
+	auto instant = std::make_unique<InstantSaIncomeLoadEstimator>(5, std::move(instantScope));
+	return std::make_unique<EmaIncomeLoadEstimator>(
+		std::move(instant),
+		std::move(config),
+		std::move(scope));
 }
 
-std::unique_ptr<IIncomeLoadEstimator> IncomeLoadEstimatorFactory::make(KalmanIncomeLoadEstimatorConfig config)
+std::unique_ptr<IIncomeLoadEstimator> IncomeLoadEstimatorFactory::make(
+	KalmanIncomeLoadEstimatorConfig config,
+	MetricScope scope)
 {
-	auto instant = std::make_unique<InstantSaIncomeLoadEstimator>(5);
-	return std::make_unique<KalmanIncomeLoadEstimator>(std::move(instant), std::move(config));
+	auto instantScope = scope.child("Мгновенный (S-ALOHA)");
+	auto instant = std::make_unique<InstantSaIncomeLoadEstimator>(5, std::move(instantScope));
+	return std::make_unique<KalmanIncomeLoadEstimator>(
+		std::move(instant),
+		std::move(config),
+		std::move(scope));
 }
 
 } // namespace starTopologyEmulator

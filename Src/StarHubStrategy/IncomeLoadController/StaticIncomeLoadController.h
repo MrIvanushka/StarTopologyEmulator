@@ -1,19 +1,19 @@
 #pragma once
 
-#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadController.h"
 #include "StarTopologyEmulator/IFaces/IIncomeStationsPredictor.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 
 namespace starTopologyEmulator
 {
 
 class StaticIncomeLoadController : public IIncomeLoadController
 {
-	DECLARE_METRICS("Статический контроллер входной нагрузки");
 public:
 	StaticIncomeLoadController(
 		std::shared_ptr<IIncomeStationsPredictor>,
-		StarHubPlanMessage::BackoffConfig);
+		StarHubPlanMessage::BackoffConfig,
+		MetricScope scope = {});
 
 	StarHubPlanMessage::BackoffConfig generate(
 		std::uint64_t plannedRaSlots,
@@ -23,6 +23,9 @@ private:
 	std::shared_ptr<IIncomeStationsPredictor> _readyUsersPredictor;
 
 	StarHubPlanMessage::BackoffConfig _config;
+
+	MetricScope _scope;
+	MetricHandle _hPTx = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

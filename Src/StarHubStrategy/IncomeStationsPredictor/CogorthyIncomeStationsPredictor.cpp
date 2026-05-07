@@ -8,11 +8,14 @@ namespace starTopologyEmulator
 
 CogorthyIncomeStationsPredictor::CogorthyIncomeStationsPredictor(
 	std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
-	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings)
+	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
+	MetricScope scope)
 	: _incomeLoadEstimator(incomeLoadEstimator)
 	, _dynamicFrameSettings(dynamicFrameSettings)
+	, _scope(std::move(scope))
 {
-	REGISTER_METRIC(_readyUsers, "Оценка числа входящих станций");
+	if (_scope.active())
+		_hReadyUsers = _scope.registerMetric("Оценка числа входящих станций");
 }
 
 double CogorthyIncomeStationsPredictor::estimateReadyUsers(
@@ -24,7 +27,7 @@ double CogorthyIncomeStationsPredictor::estimateReadyUsers(
 	const std::uint64_t earliestFrame = _dynamicFrameSettings->earliestPlanNumber();
 	if (currentFrame < earliestFrame || targetFrame <= currentFrame)
 	{
-		_readyUsers = 0.0;
+		_scope.emit(_hReadyUsers, targetFrame, 0.0);
 		return 0.0;
 	}
 
@@ -38,7 +41,7 @@ double CogorthyIncomeStationsPredictor::estimateReadyUsers(
 			break;
 	}
 
-	_readyUsers = total;
+	_scope.emit(_hReadyUsers, targetFrame, total);
 	return total;
 }
 

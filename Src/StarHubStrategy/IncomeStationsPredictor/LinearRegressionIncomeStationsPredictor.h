@@ -3,11 +3,11 @@
 #include <optional>
 #include <utility>
 
-#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IIncomeStationsPredictor.h"
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 #include "StarTopologyEmulator/StarHubStrategy/IncomeStationsPredictor/LinearRegressionIncomeStationsPredictorConfig.h"
 
 namespace starTopologyEmulator
@@ -15,13 +15,13 @@ namespace starTopologyEmulator
 
 class LinearRegressionIncomeStationsPredictor : public IIncomeStationsPredictor
 {
-	DECLARE_METRICS("Оценщик количества входящих станций")
 public:
-	explicit LinearRegressionIncomeStationsPredictor(
+	LinearRegressionIncomeStationsPredictor(
 		std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
 		std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 		std::shared_ptr<IFrameCalculator> frameCalculator,
-		LinearRegressionIncomeStationsPredictorConfig&& config);
+		LinearRegressionIncomeStationsPredictorConfig&& config,
+		MetricScope scope = {});
 
 	double estimateReadyUsers(
 		std::uint64_t currentFrame,
@@ -45,7 +45,8 @@ private:
 	std::shared_ptr<IDynamicFrameSettings> _dynamicFrameSettings;
 	std::shared_ptr<IFrameCalculator> _frameCalculator;
 
-	double _currentEstimationResult = 0;
+	MetricScope _scope;
+	MetricHandle _hReadyUsers = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

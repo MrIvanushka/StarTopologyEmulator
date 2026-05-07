@@ -38,6 +38,7 @@ set(TEST_SOURCES
 	StarStationTest.cpp
 	StarHubTest.cpp
 	EmulatorTest.cpp
+	TimeSeriesMetricSinkTest.cpp
 	TrafficProfileTest.cpp
 )
 

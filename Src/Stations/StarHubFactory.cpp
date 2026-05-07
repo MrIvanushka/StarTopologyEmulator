@@ -14,7 +14,8 @@ std::shared_ptr<IStarHub> StarHubFactory::make(StarHubInitData&& initData)
 		initData.dynamicFrameSettings,
 		std::move(initData.strategy),
 		std::move(initData.backlogAccumulator),
-		initData.tts);
+		initData.tts,
+		std::move(initData.metricScope));
 }
 
 } // namespace starTopologyEmulator

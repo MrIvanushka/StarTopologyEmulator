@@ -2,13 +2,13 @@
 
 #include <cstdint>
 
-#include "StarTopologyEmulator/IFaces/IMetricProducer.h"
-
 namespace starTopologyEmulator
 {
 
 struct RandomAccessFrameResult
 {
+	std::uint64_t frame = 0;
+
 	std::uint32_t totalRaSlots = 0;
 
 	std::uint32_t successSlots = 0;
@@ -16,9 +16,11 @@ struct RandomAccessFrameResult
 	std::uint32_t idleSlots = 0;
 };
 
-class IIncomeLoadEstimator : public IMetricProducer
+class IIncomeLoadEstimator
 {
 public:
+	virtual ~IIncomeLoadEstimator() = default;
+
 	virtual void update(const RandomAccessFrameResult& result) = 0;
 
 	virtual double incomeLoad() const = 0;

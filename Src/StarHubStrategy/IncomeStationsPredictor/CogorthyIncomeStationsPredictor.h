@@ -3,22 +3,22 @@
 #include <optional>
 #include <utility>
 
-#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IIncomeStationsPredictor.h"
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 
 namespace starTopologyEmulator
 {
 
 class CogorthyIncomeStationsPredictor : public IIncomeStationsPredictor
 {
-	DECLARE_METRICS("Когортный предсказатель входной нагрузки")
 public:
-	explicit CogorthyIncomeStationsPredictor(
+	CogorthyIncomeStationsPredictor(
 		std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
-		std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings);
+		std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
+		MetricScope scope = {});
 
 	double estimateReadyUsers(
 		std::uint64_t currentFrame,
@@ -32,7 +32,8 @@ private:
 	std::shared_ptr<IIncomeLoadEstimator> _incomeLoadEstimator;
 	std::shared_ptr<IDynamicFrameSettings> _dynamicFrameSettings;
 
-	double _readyUsers = 0;
+	MetricScope _scope;
+	MetricHandle _hReadyUsers = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

@@ -2,9 +2,9 @@
 
 #include <utility>
 
-#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 #include "StarTopologyEmulator/StarHubStrategy/StarHubStrategyConfig.h"
 
 namespace starTopologyEmulator
@@ -12,11 +12,11 @@ namespace starTopologyEmulator
 
 class SimpleStarHubStrategy : public IStarHubStrategy
 {
-	DECLARE_METRICS("Стратегия случайного доступа")
 public:
 	SimpleStarHubStrategy(
 		std::shared_ptr<IIncomeLoadEstimator>,
-		StarHubStrategyConfig&&);
+		StarHubStrategyConfig&&,
+		MetricScope scope = {});
 
 	std::shared_ptr<StarHubPlanMessage> generate(std::uint64_t currentFrame, std::uint64_t targetFrame) override;
 
@@ -27,10 +27,11 @@ private:
 
 	std::shared_ptr<IIncomeLoadEstimator> _incomeLoadEstimator;
 
-	double _baseWindow = 0;
-	double _maxWindow = 0;
-	double _pTx = 0;
-	int _raSlotsCount = 0;
+	MetricScope _scope;
+	MetricHandle _hBaseWindow = kInvalidMetricHandle;
+	MetricHandle _hMaxWindow = kInvalidMetricHandle;
+	MetricHandle _hPTx = kInvalidMetricHandle;
+	MetricHandle _hRaSlots = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

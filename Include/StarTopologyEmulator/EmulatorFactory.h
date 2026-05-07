@@ -10,6 +10,7 @@
 #include "StarTopologyEmulator/IFaces/IStarHub.h"
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
 #include "StarTopologyEmulator/IFaces/IStarStation.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 
 namespace starTopologyEmulator
 {
@@ -22,6 +23,7 @@ struct STAR_TOPOLOGY_EMULATOR_LIB_EXPORT EmulatorInitData
 	std::function<std::shared_ptr<IStarHub>(SendFunc)> hubFactory;
 	std::unique_ptr<IFrameCalculator> frameCalculator;
 	int stationCount = 10;
+	std::shared_ptr<IMetricSink> metricSink;
 };
 
 class STAR_TOPOLOGY_EMULATOR_LIB_EXPORT EmulatorFactory

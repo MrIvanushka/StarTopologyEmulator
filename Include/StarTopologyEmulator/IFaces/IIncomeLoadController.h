@@ -1,16 +1,18 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
-#include "StarTopologyEmulator/IFaces/IMetricProducer.h"
 #include "StarTopologyEmulator/Messages/StarHubPlanMessage.h"
 
 namespace starTopologyEmulator
 {
 
-class IIncomeLoadController : public IMetricProducer
+class IIncomeLoadController
 {
 public:
+	virtual ~IIncomeLoadController() = default;
+
 	virtual StarHubPlanMessage::BackoffConfig generate(
 		std::uint64_t plannedRaSlots,
 		std::uint64_t currentFrame,

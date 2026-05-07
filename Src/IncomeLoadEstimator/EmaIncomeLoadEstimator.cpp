@@ -1,20 +1,21 @@
 #include "EmaIncomeLoadEstimator.h"
 
-#include <algorithm>
-#include <cmath>
-
 namespace starTopologyEmulator
 {
 
 EmaIncomeLoadEstimator::EmaIncomeLoadEstimator(
 	std::unique_ptr<IIncomeLoadEstimator> instantEstimator,
-	EmaIncomeLoadEstimatorConfig config)
+	EmaIncomeLoadEstimatorConfig config,
+	MetricScope scope)
 	: _instantEstimator(std::move(instantEstimator))
 	, _cfg(std::move(config))
+	, _scope(std::move(scope))
 {
-	REGISTER_METRIC_SUBFOLDER(_instantEstimator.get());
-	REGISTER_METRIC(_smoothedG, "Сглаженная оценка входной нагрузки");
-	REGISTER_METRIC(_smoothedPlr, "Сглаженная оценка PLR");
+	if (_scope.active())
+	{
+		_hG = _scope.registerMetric("РЎРіР»Р°Р¶РµРЅРЅР°СЏ РѕС†РµРЅРєР° РІС…РѕРґРЅРѕР№ РЅР°РіСЂСѓР·РєРё");
+		_hPlr = _scope.registerMetric("РЎРіР»Р°Р¶РµРЅРЅР°СЏ РѕС†РµРЅРєР° PLR");
+	}
 }
 
 void EmaIncomeLoadEstimator::update(const RandomAccessFrameResult& result)
@@ -37,6 +38,10 @@ void EmaIncomeLoadEstimator::update(const RandomAccessFrameResult& result)
 		_smoothedG = _cfg.alphaG * instantG + (1.0 - _cfg.alphaG) * _smoothedG;
 		_smoothedPlr = _cfg.alphaPlr * instantPlr + (1.0 - _cfg.alphaPlr) * _smoothedPlr;
 	}
+
+	const std::uint64_t f = result.frame;
+	_scope.emit(_hG, f, _smoothedG);
+	_scope.emit(_hPlr, f, _smoothedPlr);
 }
 
 double EmaIncomeLoadEstimator::incomeLoad() const

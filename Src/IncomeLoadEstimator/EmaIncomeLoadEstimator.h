@@ -1,22 +1,21 @@
 #pragma once
 
-#include <algorithm>
 #include <memory>
 
-#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
 #include "StarTopologyEmulator/IncomeLoadEstimator/EmaIncomeLoadEstimatorConfig.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 
 namespace starTopologyEmulator
 {
 
 class EmaIncomeLoadEstimator : public IIncomeLoadEstimator
 {
-	DECLARE_METRICS("ќценка входной нагрузки (фильтр скольз€щего среднего)")
 public:
-	explicit EmaIncomeLoadEstimator(
+	EmaIncomeLoadEstimator(
 		std::unique_ptr<IIncomeLoadEstimator>,
-		EmaIncomeLoadEstimatorConfig);
+		EmaIncomeLoadEstimatorConfig,
+		MetricScope scope = {});
 
 	void update(const RandomAccessFrameResult& result) override;
 
@@ -33,6 +32,10 @@ private:
 	double _smoothedG = 0.0;
 	double _smoothedPlr = 0.0;
 	bool _isFirstUpdate = true;
+
+	MetricScope _scope;
+	MetricHandle _hG = kInvalidMetricHandle;
+	MetricHandle _hPlr = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

@@ -3,7 +3,6 @@
 #include <functional>
 #include <map>
 
-#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IBacklogAccumulator.h"
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
@@ -12,13 +11,13 @@
 #include "StarTopologyEmulator/IFaces/IStarHub.h"
 #include "StarTopologyEmulator/Messages/StarStationMessage.h"
 #include "StarTopologyEmulator/Messages/StarHubAccessMessage.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 
 namespace starTopologyEmulator
 {
 
 class StarHub : public IStarHub
 {
-	DECLARE_METRICS("����������� �������")
 public:
 	StarHub(
 		std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc,
@@ -27,7 +26,8 @@ public:
 		std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 		std::unique_ptr<IStarHubStrategy> strategy,
 		std::unique_ptr<IBacklogAccumulator> backlogAccumulator,
-		Timestamp tts);
+		Timestamp tts,
+		MetricScope scope = {});
 
 	void update(Timestamp currentTime) override;
 
@@ -40,7 +40,7 @@ private:
 	void sendAnswersToStations(Timestamp);
 private:
 	std::function<void(Timestamp, std::shared_ptr<IMessage>)> _sendFunc;
-	
+
 	std::shared_ptr<IIncomeLoadEstimator> _incomeLoadEstimator;
 	std::shared_ptr<IFrameCalculator> _frameCalculator;
 	std::shared_ptr<IDynamicFrameSettings> _dynamicFrameSettings;
@@ -54,6 +54,9 @@ private:
 	std::uint64_t _lastProcessedFrame = 0;
 
 	std::unique_ptr<IBacklogAccumulator> _backlogAccumulator;
+
+	MetricScope _scope;
+	MetricHandle _hPendingAnswers = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

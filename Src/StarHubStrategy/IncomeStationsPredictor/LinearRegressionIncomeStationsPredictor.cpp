@@ -10,13 +10,16 @@ LinearRegressionIncomeStationsPredictor::LinearRegressionIncomeStationsPredictor
 	std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	std::shared_ptr<IFrameCalculator> frameCalculator,
-	LinearRegressionIncomeStationsPredictorConfig&& config)
+	LinearRegressionIncomeStationsPredictorConfig&& config,
+	MetricScope scope)
 	: _config(config)
 	, _incomeLoadEstimator(incomeLoadEstimator)
 	, _dynamicFrameSettings(dynamicFrameSettings)
 	, _frameCalculator(frameCalculator)
+	, _scope(std::move(scope))
 {
-	REGISTER_METRIC(_currentEstimationResult, "Îöåíêà êîëè÷åñòâà ñòàíöèé â RA");
+	if (_scope.active())
+		_hReadyUsers = _scope.registerMetric("ÐžÑ†ÐµÐ½ÐºÐ° ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð° ÑÑ‚Ð°Ð½Ñ†Ð¸Ð¹ Ð² RA");
 }
 
 double LinearRegressionIncomeStationsPredictor::estimateReadyUsers(
@@ -26,7 +29,10 @@ double LinearRegressionIncomeStationsPredictor::estimateReadyUsers(
 	_incomeLoadHistory[currentFrame] = _incomeLoadEstimator->incomeLoad();
 	const std::uint64_t earliestFrame = _dynamicFrameSettings->earliestPlanNumber();
 	if (currentFrame < earliestFrame)
+	{
+		_scope.emit(_hReadyUsers, targetFrame, 0.0);
 		return 0.0;
+	}
 
 	const std::uint64_t historyCount = std::max<std::uint64_t>(
 		1ULL,
@@ -74,11 +80,17 @@ double LinearRegressionIncomeStationsPredictor::estimateReadyUsers(
 			});
 	}
 
+	auto emitAndReturn = [&](double v) {
+		const double clamped = std::max(0.0, v);
+		_scope.emit(_hReadyUsers, targetFrame, clamped);
+		return clamped;
+	};
+
 	if (points.empty())
-		return 0.0;
+		return emitAndReturn(0.0);
 
 	if (points.size() == 1)
-		return std::max(0.0, points.front().users);
+		return emitAndReturn(points.front().users);
 
 	double sumW = 0.0;
 	double sumWT = 0.0;
@@ -92,7 +104,7 @@ double LinearRegressionIncomeStationsPredictor::estimateReadyUsers(
 	}
 
 	if (sumW <= _config.epsilon)
-		return std::max(0.0, points.back().users);
+		return emitAndReturn(points.back().users);
 
 	const double meanT = sumWT / sumW;
 	const double meanY = sumWY / sumW;
@@ -117,10 +129,9 @@ double LinearRegressionIncomeStationsPredictor::estimateReadyUsers(
 	const double predicted = intercept + slope * targetTime;
 
 	if (!std::isfinite(predicted))
-		return std::max(0.0, points.back().users);
+		return emitAndReturn(points.back().users);
 
-	_currentEstimationResult = predicted;
-	return std::max(0.0, predicted);
+	return emitAndReturn(predicted);
 }
 
 double LinearRegressionIncomeStationsPredictor::clampProbability(double value) const

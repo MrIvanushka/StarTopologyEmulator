@@ -9,14 +9,18 @@ namespace starTopologyEmulator
 TargetLoadController::TargetLoadController(
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	std::shared_ptr<IIncomeStationsPredictor> readyUsersPredictor,
-	TargetLoadControllerConfig&& config)
+	TargetLoadControllerConfig&& config,
+	MetricScope scope)
 	: _config(std::move(config))
 	, _dynamicFrameSettings(dynamicFrameSettings)
 	, _readyUsersPredictor(readyUsersPredictor)
+	, _scope(std::move(scope))
 {
-	REGISTER_METRIC_SUBFOLDER(_readyUsersPredictor.get());
-	REGISTER_METRIC(_currentPlan ? _currentPlan->backoff().pTx : 0, "Текущая вероятность вещания");
-	REGISTER_METRIC(_currentPlan ? _currentPlan->backoff().baseWindow : 0, "Текущая ширина окна backoff");
+	if (_scope.active())
+	{
+		_hPTx = _scope.registerMetric("Р¦РµР»РµРІР°СЏ РІРµСЂРѕСЏС‚РЅРѕСЃС‚СЊ РІРµС‰Р°РЅРёСЏ");
+		_hBackoff = _scope.registerMetric("Р¦РµР»РµРІРѕРµ РѕРєРЅРѕ backoff");
+	}
 }
 
 StarHubPlanMessage::BackoffConfig TargetLoadController::generate(
@@ -25,9 +29,13 @@ StarHubPlanMessage::BackoffConfig TargetLoadController::generate(
 	std::uint64_t targetFrame)
 {
 	const auto& currentPlan = _dynamicFrameSettings->currentPlan(currentFrame);
-	_currentPlan = currentPlan;
 	if (!currentPlan)
-		return {};
+	{
+		StarHubPlanMessage::BackoffConfig defaultCfg;
+		_scope.emit(_hPTx, targetFrame, defaultCfg.pTx);
+		_scope.emit(_hBackoff, targetFrame, static_cast<double>(defaultCfg.baseWindow));
+		return defaultCfg;
+	}
 
 	const double predictedReadyUsers =
 		_readyUsersPredictor->estimateReadyUsers(currentFrame, targetFrame);
@@ -63,6 +71,9 @@ StarHubPlanMessage::BackoffConfig TargetLoadController::generate(
 	StarHubPlanMessage::BackoffConfig result;
 	result.pTx = nextP;
 	result.baseWindow = nextBackoff;
+
+	_scope.emit(_hPTx, targetFrame, result.pTx);
+	_scope.emit(_hBackoff, targetFrame, static_cast<double>(result.baseWindow));
 
 	return result;
 }
@@ -150,8 +161,6 @@ std::pair<double, std::uint32_t> TargetLoadController::commandForAggressiveness(
 	const double minWindowEligibility = backoffEligibilityFactor(minBackoff);
 	const double pAtMinWindow = aggressiveness / minWindowEligibility;
 
-	// Сначала пытаемся удерживать цель только вероятностью вещания
-	// при минимальном окне backoff.
 	if (pAtMinWindow >= _config.minProbability)
 	{
 		return {
@@ -160,8 +169,6 @@ std::pair<double, std::uint32_t> TargetLoadController::commandForAggressiveness(
 		};
 	}
 
-	// Если этого уже недостаточно, фиксируем вероятность на минимуме
-	// и расширяем окно backoff.
 	const double fixedProbability = clampProbability(_config.minProbability);
 
 	const double desiredEligibility = std::max(
@@ -170,8 +177,6 @@ std::pair<double, std::uint32_t> TargetLoadController::commandForAggressiveness(
 			aggressiveness / fixedProbability,
 			backoffEligibilityFactor(minBackoff)));
 
-	// phi(W) = 2 / (W + 1)
-	// => W = 2 / phi - 1
 	const double rawWindow = (2.0 / desiredEligibility) - 1.0;
 	const auto backoff = clampBackoff(
 		static_cast<std::uint32_t>(std::llround(rawWindow)));

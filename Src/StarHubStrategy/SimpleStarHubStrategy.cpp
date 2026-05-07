@@ -8,21 +8,26 @@ namespace starTopologyEmulator
 
 SimpleStarHubStrategy::SimpleStarHubStrategy(
 	std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
-	StarHubStrategyConfig&& config)
+	StarHubStrategyConfig&& config,
+	MetricScope scope)
 	: _cfg(std::move(config))
 	, _incomeLoadEstimator(incomeLoadEstimator)
+	, _scope(std::move(scope))
 {
-	REGISTER_METRIC(_baseWindow, "Размер окна backoff");
-	REGISTER_METRIC(_maxWindow, "Максимальный размер окна backoff");
-	REGISTER_METRIC(_pTx, "Вероятность занять слот абонентом");
-	REGISTER_METRIC(_raSlotsCount, "Количество слотов случайного доступа");
+	if (_scope.active())
+	{
+		_hBaseWindow = _scope.registerMetric("Р Р°Р·РјРµСЂ РѕРєРЅР° backoff");
+		_hMaxWindow = _scope.registerMetric("РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РѕРєРЅР° backoff");
+		_hPTx = _scope.registerMetric("Р’РµСЂРѕСЏС‚РЅРѕСЃС‚СЊ РІС‹С…РѕРґР° РІ СЌС„РёСЂ СЃС‚Р°РЅС†РёР№");
+		_hRaSlots = _scope.registerMetric("РљРѕР»РёС‡РµСЃС‚РІРѕ СЃР»РѕС‚РѕРІ СЃР»СѓС‡Р°Р№РЅРѕРіРѕ РґРѕСЃС‚СѓРїР°");
+	}
 }
 
 std::shared_ptr<StarHubPlanMessage> SimpleStarHubStrategy::generate(std::uint64_t currentFrame, std::uint64_t targetFrame)
 {
 	auto g = _incomeLoadEstimator->incomeLoad();
 	auto plr = _incomeLoadEstimator->plr();
-	_raSlotsCount = calculateRaSlots(g, plr);
+	const int raSlotsCount = calculateRaSlots(g, plr);
 
 	StarHubPlanMessage::BackoffConfig backoff{};
 	backoff.useExponential = true;
@@ -32,22 +37,27 @@ std::shared_ptr<StarHubPlanMessage> SimpleStarHubStrategy::generate(std::uint64_
 	double errorFactor = std::clamp(plr / (_cfg.targetPlr * 2), 0.0, 1.0);
 	double stress = std::max(loadFactor, errorFactor);
 
-	_pTx = _cfg.maxPTx - stress * (_cfg.maxPTx - _cfg.minPTx);
+	const double pTx = _cfg.maxPTx - stress * (_cfg.maxPTx - _cfg.minPTx);
 
-	_baseWindow = static_cast<std::uint8_t>(
-		_cfg.minBaseWindow + std::lround(stress * (_cfg.maxBaseWindow - _cfg.minBaseWindow))
-		);
+	const double baseWindow = static_cast<double>(static_cast<std::uint8_t>(
+		_cfg.minBaseWindow + std::lround(stress * (_cfg.maxBaseWindow - _cfg.minBaseWindow))));
 
-	_maxWindow = static_cast<double>(_baseWindow) * 4.0;
+	const double maxWindow = baseWindow * 4.0;
 
-	backoff.pTx = _pTx;
-	backoff.baseWindow = static_cast<std::uint8_t>(_baseWindow);
-	backoff.maxWindow = _maxWindow;
+	backoff.pTx = pTx;
+	backoff.baseWindow = static_cast<std::uint8_t>(baseWindow);
+	backoff.maxWindow = maxWindow;
 
 	int yellow = 0;
-	int online = static_cast<int>(_cfg.totalSlots) - _raSlotsCount - yellow;
+	int online = static_cast<int>(_cfg.totalSlots) - raSlotsCount - yellow;
 
-	StarHubPlanMessage::FtpConfig ftp = { online, yellow, _raSlotsCount };
+	StarHubPlanMessage::FtpConfig ftp = { online, yellow, raSlotsCount };
+
+	_scope.emit(_hBaseWindow, targetFrame, baseWindow);
+	_scope.emit(_hMaxWindow, targetFrame, maxWindow);
+	_scope.emit(_hPTx, targetFrame, pTx);
+	_scope.emit(_hRaSlots, targetFrame, static_cast<double>(raSlotsCount));
+
 	return std::make_shared<StarHubPlanMessage>(targetFrame, ftp, backoff);
 }
 

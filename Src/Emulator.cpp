@@ -10,7 +10,9 @@ Emulator::Emulator(
 	std::function<std::shared_ptr<IStarStation>(SendFunc, StationID)> stationFactory,
 	std::function<std::shared_ptr<IStarHub>(SendFunc)> hubFactory,
 	std::unique_ptr<IFrameCalculator> frameCalculator,
-	int stationCount)
+	int stationCount,
+	std::shared_ptr<IMetricSink> metricSink)
+	: _metricSink(std::move(metricSink))
 {
 	_stations.resize(stationCount);
 	_frameCalculator = std::move(frameCalculator);
@@ -20,12 +22,15 @@ Emulator::Emulator(
 
 	_hub = hubFactory(makeHubSendFunc());
 
-	REGISTER_METRIC_SUBFOLDER(_hub.get());
-	REGISTER_METRIC(stationsCountOnState(TerminalState::OPERATION), "���������� �������� � ���� �������");
-	REGISTER_METRIC(stationsCountOnState(TerminalState::ACQUISITION), "�������� �������");
-	REGISTER_METRIC(stationsCountOnState(TerminalState::OFF), "������������� �������");
-	REGISTER_METRIC(_previousFrameIncomeLoad, "�������� ������� ��������");
-	REGISTER_METRIC(_previousFramePlr, "�������� PLR");
+	if (_metricSink)
+	{
+		_scope = MetricScope(_metricSink, "Эмулятор");
+		_hStationsOperation = _scope.registerMetric("Количество станций в фазе работы");
+		_hStationsAcquisition = _scope.registerMetric("Входящие станции");
+		_hStationsOff = _scope.registerMetric("Выключенные станции");
+		_hIncomeLoad = _scope.registerMetric("Реальная входная нагрузка");
+		_hPlr = _scope.registerMetric("Реальный PLR");
+	}
 }
 
 std::function<void(Emulator::Timestamp, std::shared_ptr<IMessage>)> Emulator::makeHubSendFunc()
@@ -48,6 +53,11 @@ const std::vector<std::shared_ptr<IStarStation>>& Emulator::stations() const
 	return _stations;
 }
 
+std::shared_ptr<IMetricSink> Emulator::metricSink() const
+{
+	return _metricSink;
+}
+
 void Emulator::update(Timestamp now)
 {
 	auto currentFrameMoment = _frameCalculator->frameMoment(now);
@@ -66,7 +76,7 @@ void Emulator::update(Timestamp now)
 
 	if (currentFrameMoment.frameNumber != _lastProcessedFrame)
 	{
-		storeInputLoadAndPlr();
+		storeInputLoadAndPlr(_lastProcessedFrame);
 		_lastProcessedFrame = currentFrameMoment.frameNumber;
 	}
 }
@@ -157,18 +167,27 @@ std::uint32_t Emulator::stationsCountOnState(TerminalState state) const
 	return ret;
 }
 
-void Emulator::storeInputLoadAndPlr()
+void Emulator::storeInputLoadAndPlr(std::uint64_t completedFrame)
 {
-	if (_uplinkSlotsWithTraffic == 0)
+	double incomeLoad = 0.0;
+	double plr = 0.0;
+	if (_uplinkSlotsWithTraffic != 0)
 	{
-		_previousFramePlr = 0;
-		_previousFrameIncomeLoad = 0;
+		incomeLoad = static_cast<double>(_uplinkAttempted)
+			/ static_cast<double>(_frameCalculator->frameConfig().slotCountInFrame / 2);
+		if (_uplinkAttempted != 0)
+			plr = static_cast<double>(_uplinkLost) / static_cast<double>(_uplinkAttempted);
 	}
-	else
-	{
-		_previousFrameIncomeLoad = static_cast<double>(_uplinkAttempted) / static_cast<double>(_frameCalculator->frameConfig().slotCountInFrame / 2);
-		_previousFramePlr = static_cast<double>(_uplinkLost) / static_cast<double>(_uplinkAttempted);
-	}
+
+	_scope.emit(_hStationsOperation, completedFrame,
+		static_cast<double>(stationsCountOnState(TerminalState::OPERATION)));
+	_scope.emit(_hStationsAcquisition, completedFrame,
+		static_cast<double>(stationsCountOnState(TerminalState::ACQUISITION)));
+	_scope.emit(_hStationsOff, completedFrame,
+		static_cast<double>(stationsCountOnState(TerminalState::OFF)));
+	_scope.emit(_hIncomeLoad, completedFrame, incomeLoad);
+	_scope.emit(_hPlr, completedFrame, plr);
+
 	_uplinkAttempted = 0;
 	_uplinkSlotsWithTraffic = 0;
 }

@@ -12,7 +12,8 @@ StarHub::StarHub(
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	std::unique_ptr<IStarHubStrategy> strategy,
 	std::unique_ptr<IBacklogAccumulator> backlogAccumulator,
-	Timestamp tts)
+	Timestamp tts,
+	MetricScope scope)
 	: _sendFunc(std::move(sendFunc))
 	, _incomeLoadEstimator(incomeLoadEstimator)
 	, _frameCalculator(frameCalculator)
@@ -20,10 +21,10 @@ StarHub::StarHub(
 	, _strategy(std::move(strategy))
 	, _tts(tts)
 	, _backlogAccumulator(std::move(backlogAccumulator))
+	, _scope(std::move(scope))
 {
-	REGISTER_METRIC_SUBFOLDER(_strategy.get());
-	REGISTER_METRIC_SUBFOLDER(_incomeLoadEstimator.get());
-	REGISTER_METRIC(_pendingAnswers.size(), "������ ������� ��������");
+	if (_scope.active())
+		_hPendingAnswers = _scope.registerMetric("Очередь ответов станциям");
 }
 
 void StarHub::update(Timestamp currentTime)
@@ -76,6 +77,7 @@ void StarHub::onFrameEnd(std::uint64_t frameNumber)
 	auto currentPlan = _dynamicFrameSettings->currentPlan(frameNumber);
 
 	_frameAccumulator.totalRaSlots = currentPlan ? currentPlan->randomAccessSlotsCountInFrame() : 0;
+	_frameAccumulator.frame = frameNumber;
 
 	_incomeLoadEstimator->update(_frameAccumulator);
 	auto targetFrameNumber = frameNumber + 2 + _tts * 5 / (_frameCalculator->frameConfig().slotDuration * _frameCalculator->frameConfig().slotCountInFrame);
@@ -95,6 +97,8 @@ void StarHub::onFrameEnd(std::uint64_t frameNumber)
 	_frameAccumulator.idleSlots = nextFramePlan ? nextFramePlan->randomAccessSlotsCountInFrame() : 0;
 
 	sendAnswersToStations(broadcastTime);
+
+	_scope.emit(_hPendingAnswers, frameNumber, static_cast<double>(_pendingAnswers.size()));
 }
 
 void StarHub::sendAnswersToStations(Timestamp sendTime)

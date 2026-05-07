@@ -9,11 +9,20 @@ namespace starTopologyEmulator
 HysteresisLoadController::HysteresisLoadController(
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	std::shared_ptr<IIncomeStationsPredictor> readyUsersPredictor,
-	HysteresisLoadControllerConfig&& config)
+	HysteresisLoadControllerConfig&& config,
+	MetricScope scope)
 	: _config(std::move(config))
 	, _dynamicFrameSettings(dynamicFrameSettings)
 	, _readyUsersPredictor(readyUsersPredictor)
-{}
+	, _scope(std::move(scope))
+{
+	if (_scope.active())
+	{
+		_hPTx = _scope.registerMetric("Целевая вероятность вещания");
+		_hBackoff = _scope.registerMetric("Целевое окно backoff");
+		_hState = _scope.registerMetric("Состояние гистерезиса");
+	}
+}
 
 StarHubPlanMessage::BackoffConfig HysteresisLoadController::generate(
 	std::uint64_t plannedRaSlots,
@@ -42,6 +51,10 @@ StarHubPlanMessage::BackoffConfig HysteresisLoadController::generate(
 	StarHubPlanMessage::BackoffConfig result;
 	result.pTx = nextP;
 	result.baseWindow = nextBackoff;
+
+	_scope.emit(_hPTx, targetFrame, result.pTx);
+	_scope.emit(_hBackoff, targetFrame, static_cast<double>(result.baseWindow));
+	_scope.emit(_hState, targetFrame, static_cast<double>(static_cast<int>(_state)));
 
 	return result;
 }

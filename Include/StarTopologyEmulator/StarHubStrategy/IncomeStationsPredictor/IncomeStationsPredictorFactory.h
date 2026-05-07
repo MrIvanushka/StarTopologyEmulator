@@ -6,6 +6,7 @@
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 #include "StarTopologyEmulator/StarHubStrategy/IncomeStationsPredictor/LinearRegressionIncomeStationsPredictorConfig.h"
 
 namespace starTopologyEmulator
@@ -18,11 +19,13 @@ public:
         std::shared_ptr<IIncomeLoadEstimator>,
         std::shared_ptr<IDynamicFrameSettings>,
         std::shared_ptr<IFrameCalculator>,
-        LinearRegressionIncomeStationsPredictorConfig&&);
+        LinearRegressionIncomeStationsPredictorConfig&&,
+        MetricScope scope = {});
 
     static std::unique_ptr<IIncomeStationsPredictor> make(
         std::shared_ptr<IIncomeLoadEstimator>,
-        std::shared_ptr<IDynamicFrameSettings>);
+        std::shared_ptr<IDynamicFrameSettings>,
+        MetricScope scope = {});
 };
 
 } // namespace starTopologyEmulator

@@ -44,14 +44,18 @@ double logLikelihoodGrad(double g, const RandomAccessFrameResult& result)
 
 }
 
-InstantSaIncomeLoadEstimator::InstantSaIncomeLoadEstimator(double maxG)
+InstantSaIncomeLoadEstimator::InstantSaIncomeLoadEstimator(double maxG, MetricScope scope)
 	: _maxG(maxG)
+	, _scope(std::move(scope))
 {
-	REGISTER_METRIC(_lastResult.idleSlots, "Входное значение свободных слотов");
-	REGISTER_METRIC(_lastResult.successSlots, "Входное значение успешных слотов");
-	REGISTER_METRIC(_lastResult.collisionSlots, "Входное значение коллизионных слотов");
-	REGISTER_METRIC(_instantG, "Мгновенная оценка входной нагрузки");
-	REGISTER_METRIC(_instantPlr, "Мгновенная оценка PLR");
+	if (_scope.active())
+	{
+		_hIdleSlots = _scope.registerMetric("РўРµРєСѓС‰РµРµ Р·РЅР°С‡РµРЅРёРµ СЃРІРѕР±РѕРґРЅС‹С… СЃР»РѕС‚РѕРІ");
+		_hSuccessSlots = _scope.registerMetric("РўРµРєСѓС‰РµРµ Р·РЅР°С‡РµРЅРёРµ СѓСЃРїРµС€РЅС‹С… СЃР»РѕС‚РѕРІ");
+		_hCollisionSlots = _scope.registerMetric("РўРµРєСѓС‰РµРµ Р·РЅР°С‡РµРЅРёРµ РєРѕР»Р»РёР·РёРѕРЅРЅС‹С… СЃР»РѕС‚РѕРІ");
+		_hInstantG = _scope.registerMetric("РњРіРЅРѕРІРµРЅРЅР°СЏ РѕС†РµРЅРєР° РІС…РѕРґРЅРѕР№ РЅР°РіСЂСѓР·РєРё");
+		_hInstantPlr = _scope.registerMetric("РњРіРЅРѕРІРµРЅРЅР°СЏ РѕС†РµРЅРєР° PLR");
+	}
 }
 
 void InstantSaIncomeLoadEstimator::update(const RandomAccessFrameResult& result)
@@ -59,6 +63,13 @@ void InstantSaIncomeLoadEstimator::update(const RandomAccessFrameResult& result)
 	_instantG = calculateInstantG(result);
 	_instantPlr = calculateInstantPlr(result);
 	_lastResult = result;
+
+	const std::uint64_t f = result.frame;
+	_scope.emit(_hIdleSlots, f, static_cast<double>(result.idleSlots));
+	_scope.emit(_hSuccessSlots, f, static_cast<double>(result.successSlots));
+	_scope.emit(_hCollisionSlots, f, static_cast<double>(result.collisionSlots));
+	_scope.emit(_hInstantG, f, _instantG);
+	_scope.emit(_hInstantPlr, f, _instantPlr);
 }
 
 double InstantSaIncomeLoadEstimator::incomeLoad() const
@@ -79,7 +90,6 @@ double InstantSaIncomeLoadEstimator::calculateInstantG(const RandomAccessFrameRe
 	const double minG = eps;
 	const double maxG = std::max(_maxG, minG);
 
-	// Если все слоты коллизионные, максимум правдоподобия лежит на верхней границе.
 	if (res.idleSlots == 0 && res.successSlots == 0)
 		return maxG;
 
@@ -114,7 +124,7 @@ double InstantSaIncomeLoadEstimator::calculateInstantG(const RandomAccessFrameRe
 double InstantSaIncomeLoadEstimator::calculateInstantPlr(const RandomAccessFrameResult& res) const
 {
 	uint32_t totalAttempts = res.successSlots + res.collisionSlots;
-	
+
 	if (totalAttempts == 0)
 		return 0.0;
 

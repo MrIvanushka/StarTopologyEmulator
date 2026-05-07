@@ -6,6 +6,7 @@
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadController.h"
 #include "StarTopologyEmulator/IFaces/IIncomeStationsPredictor.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 #include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/SimpleMarginalUtilityBasedLoadControllerConfig.h"
 
 namespace starTopologyEmulator
@@ -14,10 +15,11 @@ namespace starTopologyEmulator
 class SimpleMarginalUtilityBasedLoadController : public IIncomeLoadController
 {
 public:
-	explicit SimpleMarginalUtilityBasedLoadController(
+	SimpleMarginalUtilityBasedLoadController(
 		std::shared_ptr<IDynamicFrameSettings>,
 		std::shared_ptr<IIncomeStationsPredictor>,
-		SimpleMarginalUtilityBasedLoadControllerConfig&&);
+		SimpleMarginalUtilityBasedLoadControllerConfig&&,
+		MetricScope scope = {});
 
 	StarHubPlanMessage::BackoffConfig generate(
 		std::uint64_t plannedRaSlots,
@@ -34,6 +36,10 @@ private:
 
 	std::shared_ptr<IDynamicFrameSettings> _dynamicFrameSettings;
 	std::shared_ptr<IIncomeStationsPredictor> _readyUsersPredictor;
+
+	MetricScope _scope;
+	MetricHandle _hPTx = kInvalidMetricHandle;
+	MetricHandle _hBackoff = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

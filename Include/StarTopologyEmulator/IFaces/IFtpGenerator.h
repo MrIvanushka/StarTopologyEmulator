@@ -1,16 +1,18 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
-#include "StarTopologyEmulator/IFaces/IMetricProducer.h"
 #include "StarTopologyEmulator/Messages/StarHubPlanMessage.h"
 
 namespace starTopologyEmulator
 {
 
-class IFtpGenerator : public IMetricProducer
+class IFtpGenerator
 {
 public:
+	virtual ~IFtpGenerator() = default;
+
 	virtual StarHubPlanMessage::FtpConfig generate(std::uint64_t frame) = 0;
 };
 

@@ -1,23 +1,21 @@
 #pragma once
 
-#include <algorithm>
 #include <memory>
 
-#include "Metrics/Metrics.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
 #include "StarTopologyEmulator/IncomeLoadEstimator/KalmanIncomeLoadEstimatorConfig.h"
-
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 
 namespace starTopologyEmulator
 {
 
 class KalmanIncomeLoadEstimator : public IIncomeLoadEstimator
 {
-	DECLARE_METRICS("Оценка входной нагрузки (фильтр Калмана)")
 public:
-	explicit KalmanIncomeLoadEstimator(
+	KalmanIncomeLoadEstimator(
 		std::unique_ptr<IIncomeLoadEstimator>,
-		KalmanIncomeLoadEstimatorConfig);
+		KalmanIncomeLoadEstimatorConfig,
+		MetricScope scope = {});
 
 	void update(const RandomAccessFrameResult& result) override;
 
@@ -30,8 +28,8 @@ public:
 private:
 	struct KalmanState
 	{
-		double value = 0.0; // Оцененное значение
-		double error = 1.0; // Априорная ошибка
+		double value = 0.0;
+		double error = 1.0;
 	};
 
 	KalmanState kalmanStep(KalmanState state, double measurement, double Q, double R);
@@ -43,8 +41,14 @@ private:
 	std::unique_ptr<IIncomeLoadEstimator> _instantEstimator;
 
 	KalmanIncomeLoadEstimatorConfig _cfg;
-	KalmanState _stateG{0.0, 1.0};
-	KalmanState _statePlr{0.0, 1.0};
+	KalmanState _stateG{ 0.0, 1.0 };
+	KalmanState _statePlr{ 0.0, 1.0 };
+
+	MetricScope _scope;
+	MetricHandle _hG = kInvalidMetricHandle;
+	MetricHandle _hGError = kInvalidMetricHandle;
+	MetricHandle _hPlr = kInvalidMetricHandle;
+	MetricHandle _hPlrError = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator
