@@ -6,6 +6,7 @@
 #include "StarTopologyEmulator/StarTopologyEmulatorExport.h"
 #include "StarTopologyEmulator/TrafficProfile/BurstTrafficProfileConfig.h"
 #include "StarTopologyEmulator/TrafficProfile/CbrTrafficProfileConfig.h"
+#include "StarTopologyEmulator/TrafficProfile/ParetoBurstTrafficProfileConfig.h"
 #include "StarTopologyEmulator/TrafficProfile/PoissonTrafficProfileConfig.h"
 
 namespace starTopologyEmulator
@@ -17,6 +18,7 @@ public:
 	static std::unique_ptr<ITrafficProfile> make(const CbrTrafficProfileConfig&);
 	static std::unique_ptr<ITrafficProfile> make(const PoissonTrafficProfileConfig&);
 	static std::unique_ptr<ITrafficProfile> make(const BurstTrafficProfileConfig&);
+	static std::unique_ptr<ITrafficProfile> make(const ParetoBurstTrafficProfileConfig&);
 };
 
 } // namespace starTopologyEmulator

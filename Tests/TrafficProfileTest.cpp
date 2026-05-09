@@ -2,6 +2,7 @@
 
 #include "StarTopologyEmulator/TrafficProfile/BurstTrafficProfileConfig.h"
 #include "StarTopologyEmulator/TrafficProfile/CbrTrafficProfileConfig.h"
+#include "StarTopologyEmulator/TrafficProfile/ParetoBurstTrafficProfileConfig.h"
 #include "StarTopologyEmulator/TrafficProfile/PoissonTrafficProfileConfig.h"
 #include "StarTopologyEmulator/TrafficProfile/TrafficProfileFactory.h"
 
@@ -226,4 +227,118 @@ TEST(BurstTrafficProfile, EmpiricalMeanMatchesFormula2)
 		* static_cast<double>(cfg.bitsPerPacket);
 
 	EXPECT_NEAR(static_cast<double>(total), expectedTotalBits, expectedTotalBits * 0.05);
+}
+
+TEST(ParetoBurstTrafficProfile, ZeroOnRateProducesZeroBits)
+{
+	ParetoBurstTrafficProfileConfig cfg;
+	cfg.bitsPerPacket = 100;
+	cfg.minOnDuration = 10.0;
+	cfg.minOffDuration = 10.0;
+	cfg.alpha = 1.5;
+	cfg.seed = 42;
+	auto profile = TrafficProfileFactory::make(cfg);
+	EXPECT_EQ(profile->generateBits(10000), 0u);
+}
+
+TEST(ParetoBurstTrafficProfile, ZeroPhaseDurationProducesZeroBits)
+{
+	ParetoBurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 0.5;
+	cfg.bitsPerPacket = 100;
+	cfg.minOffDuration = 10.0;
+	cfg.alpha = 1.5;
+	cfg.seed = 42;
+	auto profile = TrafficProfileFactory::make(cfg);
+	EXPECT_EQ(profile->generateBits(1000), 0u);
+}
+
+TEST(ParetoBurstTrafficProfile, AlphaBelowOneIsRejected)
+{
+	ParetoBurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 0.5;
+	cfg.bitsPerPacket = 100;
+	cfg.minOnDuration = 10.0;
+	cfg.minOffDuration = 10.0;
+	cfg.alpha = 0.8;
+	cfg.seed = 42;
+	auto profile = TrafficProfileFactory::make(cfg);
+	EXPECT_EQ(profile->generateBits(1000), 0u);
+}
+
+TEST(ParetoBurstTrafficProfile, NonPositiveDurationReturnsZero)
+{
+	ParetoBurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 0.5;
+	cfg.bitsPerPacket = 100;
+	cfg.minOnDuration = 10.0;
+	cfg.minOffDuration = 10.0;
+	cfg.alpha = 1.5;
+	cfg.seed = 42;
+	auto profile = TrafficProfileFactory::make(cfg);
+	EXPECT_EQ(profile->generateBits(0), 0u);
+	EXPECT_EQ(profile->generateBits(-100), 0u);
+}
+
+TEST(ParetoBurstTrafficProfile, GeneratesMultiplesOfPacketSize)
+{
+	ParetoBurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 0.2;
+	cfg.bitsPerPacket = 64;
+	cfg.minOnDuration = 5.0;
+	cfg.minOffDuration = 15.0;
+	cfg.alpha = 1.5;
+	cfg.seed = 12345;
+	auto profile = TrafficProfileFactory::make(cfg);
+
+	for (int i = 0; i < 200; ++i)
+	{
+		const std::uint64_t bits = profile->generateBits(50);
+		EXPECT_EQ(bits % cfg.bitsPerPacket, 0u);
+	}
+}
+
+TEST(ParetoBurstTrafficProfile, SameSeedProducesSameSequence)
+{
+	ParetoBurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 0.5;
+	cfg.bitsPerPacket = 100;
+	cfg.minOnDuration = 10.0;
+	cfg.minOffDuration = 30.0;
+	cfg.alpha = 1.5;
+	cfg.seed = 7;
+
+	auto a = TrafficProfileFactory::make(cfg);
+	auto b = TrafficProfileFactory::make(cfg);
+
+	for (int i = 0; i < 50; ++i)
+		EXPECT_EQ(a->generateBits(50), b->generateBits(50));
+}
+
+TEST(ParetoBurstTrafficProfile, EmpiricalMeanMatchesParetoMeanFormula)
+{
+	ParetoBurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 1.0;
+	cfg.bitsPerPacket = 10;
+	cfg.minOnDuration = 5.0;
+	cfg.minOffDuration = 10.0;
+	cfg.alpha = 3.0;
+	cfg.seed = 2024;
+	auto profile = TrafficProfileFactory::make(cfg);
+
+	const Timestamp duration = 5000;
+	const int iterations = 400;
+
+	std::uint64_t total = 0;
+	for (int i = 0; i < iterations; ++i)
+		total += profile->generateBits(duration);
+
+	const double meanOn = cfg.alpha * cfg.minOnDuration / (cfg.alpha - 1.0);
+	const double meanOff = cfg.alpha * cfg.minOffDuration / (cfg.alpha - 1.0);
+	const double avgRate = cfg.packetsPerTimestampOn * meanOn / (meanOn + meanOff);
+	const double expectedTotalBits = avgRate
+		* static_cast<double>(duration) * iterations
+		* static_cast<double>(cfg.bitsPerPacket);
+
+	EXPECT_NEAR(static_cast<double>(total), expectedTotalBits, expectedTotalBits * 0.10);
 }
