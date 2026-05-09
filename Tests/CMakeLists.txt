@@ -19,11 +19,13 @@ set(TEST_SOURCES
 	Helpers.h
 	Mocks/MockBacklogAccumulator.h
 	Mocks/MockDynamicFrameSettings.h
+	Mocks/MockEmulator.h
 	Mocks/MockFrameCalculator.h
 	Mocks/MockFtpGenerator.h
 	Mocks/MockIncomeLoadController.h
 	Mocks/MockIncomeLoadEstimator.h
 	Mocks/MockIncomeStationsPredictor.h
+	Mocks/MockScenarioEvent.h
 	Mocks/MockStarHub.h
 	Mocks/MockStarHubStrategy.h
 	Mocks/MockStarStation.h
@@ -34,6 +36,7 @@ set(TEST_SOURCES
 	FtpGeneratorTest.cpp
 	IncomeLoadControllersTest.cpp
 	IncomeStationsPredictorsTest.cpp
+	ScenarioRunnerTest.cpp
 	StarHubStrategiesTest.cpp
 	StarStationTest.cpp
 	StarHubTest.cpp
