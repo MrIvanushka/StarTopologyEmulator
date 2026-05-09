@@ -7,10 +7,12 @@
 namespace starTopologyEmulator
 {
 
-struct STAR_TOPOLOGY_EMULATOR_LIB_EXPORT PoissonTrafficProfileConfig
+struct STAR_TOPOLOGY_EMULATOR_LIB_EXPORT BurstTrafficProfileConfig
 {
-	double packetsPerTimestamp = 0.0;
+	double packetsPerTimestampOn = 0.0;
 	std::uint64_t bitsPerPacket = 0;
+	double meanOnDuration = 0.0;
+	double meanOffDuration = 0.0;
 	std::uint32_t seed = 0;
 };
 

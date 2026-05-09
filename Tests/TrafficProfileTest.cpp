@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "StarTopologyEmulator/TrafficProfile/BurstTrafficProfileConfig.h"
 #include "StarTopologyEmulator/TrafficProfile/CbrTrafficProfileConfig.h"
 #include "StarTopologyEmulator/TrafficProfile/PoissonTrafficProfileConfig.h"
 #include "StarTopologyEmulator/TrafficProfile/TrafficProfileFactory.h"
@@ -115,15 +116,14 @@ TEST(PoissonTrafficProfile, SameSeedProducesSameSequence)
 
 TEST(PoissonTrafficProfile, EmpiricalMeanApproachesLambdaTimesPacketBits)
 {
-	// Pois(λ·Δt) over many calls: mean bits per call → λ · Δt · bitsPerPacket.
 	PoissonTrafficProfileConfig cfg;
 	cfg.packetsPerTimestamp = 0.1;
 	cfg.bitsPerPacket = 100;
 	cfg.seed = 2024;
 	auto profile = TrafficProfileFactory::make(cfg);
 
-	const Timestamp duration = 100;       // expected packets per call: 10
-	const std::uint64_t expectedPerCall = 1000; // 10 packets * 100 bits
+	const Timestamp duration = 100;
+	const std::uint64_t expectedPerCall = 1000;
 	const int iterations = 5000;
 
 	std::uint64_t total = 0;
@@ -131,7 +131,99 @@ TEST(PoissonTrafficProfile, EmpiricalMeanApproachesLambdaTimesPacketBits)
 		total += profile->generateBits(duration);
 
 	const double meanBits = static_cast<double>(total) / iterations;
-	// Std error of mean ≈ sqrt(λΔt)/N · bitsPerPacket ≈ 4.47 bits.
-	// 5% slack covers >10σ deviations.
 	EXPECT_NEAR(meanBits, static_cast<double>(expectedPerCall), expectedPerCall * 0.05);
+}
+
+TEST(BurstTrafficProfile, ZeroOnRateProducesZeroBits)
+{
+	BurstTrafficProfileConfig cfg;
+	cfg.bitsPerPacket = 100;
+	cfg.meanOnDuration = 50.0;
+	cfg.meanOffDuration = 50.0;
+	cfg.seed = 42;
+	auto profile = TrafficProfileFactory::make(cfg);
+	EXPECT_EQ(profile->generateBits(10000), 0u);
+}
+
+TEST(BurstTrafficProfile, ZeroPhaseDurationProducesZeroBits)
+{
+	BurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 0.5;
+	cfg.bitsPerPacket = 100;
+	cfg.meanOffDuration = 50.0;
+	cfg.seed = 42;
+	auto profile = TrafficProfileFactory::make(cfg);
+	EXPECT_EQ(profile->generateBits(1000), 0u);
+}
+
+TEST(BurstTrafficProfile, NonPositiveDurationReturnsZero)
+{
+	BurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 0.5;
+	cfg.bitsPerPacket = 100;
+	cfg.meanOnDuration = 50.0;
+	cfg.meanOffDuration = 50.0;
+	cfg.seed = 42;
+	auto profile = TrafficProfileFactory::make(cfg);
+	EXPECT_EQ(profile->generateBits(0), 0u);
+	EXPECT_EQ(profile->generateBits(-100), 0u);
+}
+
+TEST(BurstTrafficProfile, GeneratesMultiplesOfPacketSize)
+{
+	BurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 0.2;
+	cfg.bitsPerPacket = 64;
+	cfg.meanOnDuration = 30.0;
+	cfg.meanOffDuration = 70.0;
+	cfg.seed = 12345;
+	auto profile = TrafficProfileFactory::make(cfg);
+
+	for (int i = 0; i < 200; ++i)
+	{
+		const std::uint64_t bits = profile->generateBits(50);
+		EXPECT_EQ(bits % cfg.bitsPerPacket, 0u);
+	}
+}
+
+TEST(BurstTrafficProfile, SameSeedProducesSameSequence)
+{
+	BurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 0.5;
+	cfg.bitsPerPacket = 100;
+	cfg.meanOnDuration = 20.0;
+	cfg.meanOffDuration = 80.0;
+	cfg.seed = 7;
+
+	auto a = TrafficProfileFactory::make(cfg);
+	auto b = TrafficProfileFactory::make(cfg);
+
+	for (int i = 0; i < 50; ++i)
+		EXPECT_EQ(a->generateBits(50), b->generateBits(50));
+}
+
+TEST(BurstTrafficProfile, EmpiricalMeanMatchesFormula2)
+{
+	BurstTrafficProfileConfig cfg;
+	cfg.packetsPerTimestampOn = 1.0;
+	cfg.bitsPerPacket = 10;
+	cfg.meanOnDuration = 30.0;
+	cfg.meanOffDuration = 70.0;
+	cfg.seed = 2024;
+	auto profile = TrafficProfileFactory::make(cfg);
+
+	const Timestamp duration = 1000;
+	const int iterations = 200;
+
+	std::uint64_t total = 0;
+	for (int i = 0; i < iterations; ++i)
+		total += profile->generateBits(duration);
+
+	const double avgRate = cfg.packetsPerTimestampOn
+		* cfg.meanOnDuration / (cfg.meanOnDuration + cfg.meanOffDuration);
+	const double expectedTotalBits = avgRate
+		* static_cast<double>(duration) * iterations
+		* static_cast<double>(cfg.bitsPerPacket);
+
+	EXPECT_NEAR(static_cast<double>(total), expectedTotalBits, expectedTotalBits * 0.05);
 }
