@@ -61,10 +61,15 @@ double CogorthyIncomeStationsPredictor::calculateImpact(
 		return 0.0;
 
 	const auto& cfg = planI->backoff();
-	int W = static_cast<int>(cfg.baseWindow);
-	if (cfg.useExponential)
-		W = static_cast<int>(cfg.baseWindow * cfg.exponentBase);
-	W = std::clamp(W, static_cast<int>(cfg.baseWindow), static_cast<int>(cfg.maxWindow));
+	// W — ширина диапазона задержек, которые могла выбрать станция, начавшая
+	// backoff во фрейме impactFrame. При экспоненциальном backoff после
+	// нескольких коллизий окно растёт до maxWindow, поэтому используем его
+	// как верхнюю границу — иначе типичные горизонты планирования
+	// (targetFrame - impactFrame) превышают baseWindow и формула psiAvg
+	// схлопывается в 0 при pTx≈1.
+	int W = cfg.useExponential
+		? static_cast<int>(cfg.maxWindow)
+		: static_cast<int>(cfg.baseWindow);
 	if (W < 1)
 		W = 1;
 
