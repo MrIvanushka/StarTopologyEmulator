@@ -7,9 +7,15 @@
 #include "StarTopologyEmulator/IFaces/IIncomeStationsPredictor.h"
 #include "StarTopologyEmulator/Messages/StarHubPlanMessage.h"
 #include "StarTopologyEmulator/Metrics/MetricSink.h"
-#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/HysteresisLoadControllerConfig.h"
+#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/AlphaFairLoadControllerConfig.h"
+#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/CollisionBudgetLoadControllerConfig.h"
+#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/EnergyAwareLoadControllerConfig.h"
+#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/GreyModelAdaptiveBackoffControllerConfig.h"
+#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/LogBarrierLoadControllerConfig.h"
+#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/PiLoadControllerConfig.h"
+#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/PseudoBayesianLoadControllerConfig.h"
+#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/RiskSensitiveLoadControllerConfig.h"
 #include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/SimpleMarginalUtilityBasedLoadControllerConfig.h"
-#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/TargetLoadControllerConfig.h"
 
 namespace starTopologyEmulator
 {
@@ -25,7 +31,7 @@ public:
     static std::unique_ptr<IIncomeLoadController> make(
         std::shared_ptr<IDynamicFrameSettings>,
         std::shared_ptr<IIncomeStationsPredictor>,
-        HysteresisLoadControllerConfig&&,
+        PiLoadControllerConfig&&,
         MetricScope scope = {});
 
     static std::unique_ptr<IIncomeLoadController> make(
@@ -35,9 +41,43 @@ public:
         MetricScope scope = {});
 
     static std::unique_ptr<IIncomeLoadController> make(
+        std::shared_ptr<IIncomeStationsPredictor>,
+        PseudoBayesianLoadControllerConfig&&,
+        MetricScope scope = {});
+
+    static std::unique_ptr<IIncomeLoadController> make(
         std::shared_ptr<IDynamicFrameSettings>,
         std::shared_ptr<IIncomeStationsPredictor>,
-        TargetLoadControllerConfig&&,
+        CollisionBudgetLoadControllerConfig&&,
+        MetricScope scope = {});
+
+    static std::unique_ptr<IIncomeLoadController> make(
+        std::shared_ptr<IIncomeStationsPredictor>,
+        GreyModelAdaptiveBackoffControllerConfig&&,
+        MetricScope scope = {});
+
+    static std::unique_ptr<IIncomeLoadController> make(
+        std::shared_ptr<IDynamicFrameSettings>,
+        std::shared_ptr<IIncomeStationsPredictor>,
+        LogBarrierLoadControllerConfig&&,
+        MetricScope scope = {});
+
+    static std::unique_ptr<IIncomeLoadController> make(
+        std::shared_ptr<IDynamicFrameSettings>,
+        std::shared_ptr<IIncomeStationsPredictor>,
+        EnergyAwareLoadControllerConfig&&,
+        MetricScope scope = {});
+
+    static std::unique_ptr<IIncomeLoadController> make(
+        std::shared_ptr<IDynamicFrameSettings>,
+        std::shared_ptr<IIncomeStationsPredictor>,
+        AlphaFairLoadControllerConfig&&,
+        MetricScope scope = {});
+
+    static std::unique_ptr<IIncomeLoadController> make(
+        std::shared_ptr<IDynamicFrameSettings>,
+        std::shared_ptr<IIncomeStationsPredictor>,
+        RiskSensitiveLoadControllerConfig&&,
         MetricScope scope = {});
 };
 
