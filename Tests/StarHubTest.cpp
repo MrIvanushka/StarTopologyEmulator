@@ -78,7 +78,7 @@ struct HubFixture
 				return makePlan(target);
 			});
 
-		auto accOwned = std::make_unique<NiceMock<MockBacklogAccumulator>>();
+		auto accOwned = std::make_shared<NiceMock<MockBacklogAccumulator>>();
 		backlogAccumulator = accOwned.get();
 		ON_CALL(*backlogAccumulator, generateOperationPlan(_, _)).WillByDefault(
 			[](std::uint64_t frame, std::uint64_t /*slots*/) {

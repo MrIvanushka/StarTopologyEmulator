@@ -1,21 +1,19 @@
 #pragma once
 
-#include <optional>
-#include <utility>
+#include <unordered_map>
 
 #include "StarTopologyEmulator/IFaces/IIncomeStationsPredictor.h"
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
-#include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadEstimator.h"
 #include "StarTopologyEmulator/Metrics/MetricSink.h"
 
 namespace starTopologyEmulator
 {
 
-class CogorthyIncomeStationsPredictor : public IIncomeStationsPredictor
+class BackoffAwareCogorthyIncomeStationsPredictor : public IIncomeStationsPredictor
 {
 public:
-	CogorthyIncomeStationsPredictor(
+	BackoffAwareCogorthyIncomeStationsPredictor(
 		std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
 		std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 		MetricScope scope = {});
@@ -23,6 +21,7 @@ public:
 	double estimateReadyUsers(
 		std::uint64_t currentFrame,
 		std::uint64_t targetFrame) override;
+
 private:
 	double calculateImpact(
 		std::uint64_t impactFrame,

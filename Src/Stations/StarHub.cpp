@@ -11,7 +11,7 @@ StarHub::StarHub(
 	std::shared_ptr<IFrameCalculator> frameCalculator,
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	std::unique_ptr<IStarHubStrategy> strategy,
-	std::unique_ptr<IBacklogAccumulator> backlogAccumulator,
+	std::shared_ptr<IBacklogAccumulator> backlogAccumulator,
 	Timestamp tts,
 	MetricScope scope)
 	: _sendFunc(std::move(sendFunc))

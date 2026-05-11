@@ -1,4 +1,4 @@
-#include "CogorthyIncomeStationsPredictor.h"
+#include "BackoffAwareCogorthyIncomeStationsPredictor.h"
 
 #include <algorithm>
 #include <cmath>
@@ -6,7 +6,7 @@
 namespace starTopologyEmulator
 {
 
-CogorthyIncomeStationsPredictor::CogorthyIncomeStationsPredictor(
+BackoffAwareCogorthyIncomeStationsPredictor::BackoffAwareCogorthyIncomeStationsPredictor(
 	std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
 	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 	MetricScope scope)
@@ -18,7 +18,7 @@ CogorthyIncomeStationsPredictor::CogorthyIncomeStationsPredictor(
 		_hReadyUsers = _scope.registerMetric("Оценка числа входящих станций");
 }
 
-double CogorthyIncomeStationsPredictor::estimateReadyUsers(
+double BackoffAwareCogorthyIncomeStationsPredictor::estimateReadyUsers(
 	std::uint64_t currentFrame,
 	std::uint64_t targetFrame)
 {
@@ -45,23 +45,40 @@ double CogorthyIncomeStationsPredictor::estimateReadyUsers(
 	return total;
 }
 
-double CogorthyIncomeStationsPredictor::calculateImpact(
+double BackoffAwareCogorthyIncomeStationsPredictor::calculateImpact(
 	std::uint64_t impactFrame,
 	std::uint64_t targetFrame,
 	std::uint64_t commandApplyDelay)
 {
 	auto impactFramePlan = _dynamicFrameSettings->currentPlan(impactFrame);
 	if (!impactFramePlan)
-		return 0;
+		return 0.0;
 
-	auto res = _incomeLoadHistory[impactFrame] * impactFramePlan->randomAccessSlotsCountInFrame();
+	const auto& backoff = impactFramePlan->backoff();
+	int W = backoff.useExponential
+		? static_cast<int>(backoff.baseWindow * backoff.exponentBase)
+		: static_cast<int>(backoff.baseWindow);
+	if (W < 1)
+		W = 1;
 
-	for (auto i = impactFrame + commandApplyDelay; i < targetFrame - 1; ++i)
+	const double attempts = _incomeLoadHistory[impactFrame]
+		* static_cast<double>(impactFramePlan->randomAccessSlotsCountInFrame());
+	const double pTx = backoff.pTx;
+
+	double weighted = 0.0;
+	for (int d = 1; d <= W; ++d)
 	{
-		auto probability = _dynamicFrameSettings->currentPlan(impactFrame)->backoff().pTx;
-		res *= (1 - probability);
+		const std::uint64_t firstTry = impactFrame + commandApplyDelay + static_cast<std::uint64_t>(d - 1);
+		if (firstTry + 1 >= targetFrame)
+		{
+			weighted += 1.0;
+			continue;
+		}
+		const std::uint64_t skipCount = targetFrame - firstTry - 1;
+		weighted += std::pow(1.0 - pTx, static_cast<double>(skipCount));
 	}
-	return res;
+
+	return attempts * weighted / static_cast<double>(W);
 }
 
 } // namespace starTopologyEmulator

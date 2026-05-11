@@ -29,7 +29,8 @@ StarStation::StarStation(
 	_context->dynamicFrameSettings = std::move(dynamicFrameSettings);
 	_context->trafficProfile = std::move(trafficProfile);
 	_context->messagesNeeded = messagesNeeded;
-	_context->ackTimeout = 6 * tts;
+	const auto& frameConfig = _context->frameCalculator->frameConfig();
+	_context->ackTimeout = 2 * frameConfig.slotDuration * frameConfig.slotCountInFrame + 5 * tts;
 	_context->rng = &_rng;
 	_context->sendFunc = std::move(sendFunc);
 

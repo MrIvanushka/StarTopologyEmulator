@@ -25,7 +25,7 @@ public:
 		std::shared_ptr<IFrameCalculator> frameCalculator,
 		std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
 		std::unique_ptr<IStarHubStrategy> strategy,
-		std::unique_ptr<IBacklogAccumulator> backlogAccumulator,
+		std::shared_ptr<IBacklogAccumulator> backlogAccumulator,
 		Timestamp tts,
 		MetricScope scope = {});
 
@@ -53,7 +53,7 @@ private:
 	RandomAccessFrameResult _frameAccumulator;
 	std::uint64_t _lastProcessedFrame = 0;
 
-	std::unique_ptr<IBacklogAccumulator> _backlogAccumulator;
+	std::shared_ptr<IBacklogAccumulator> _backlogAccumulator;
 
 	MetricScope _scope;
 	MetricHandle _hPendingAnswers = kInvalidMetricHandle;

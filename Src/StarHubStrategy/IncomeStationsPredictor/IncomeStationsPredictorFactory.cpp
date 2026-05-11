@@ -1,5 +1,6 @@
 #include "StarTopologyEmulator/StarHubStrategy/IncomeStationsPredictor/IncomeStationsPredictorFactory.h"
 
+#include "BackoffAwareCogorthyIncomeStationsPredictor.h"
 #include "CogorthyIncomeStationsPredictor.h"
 #include "LinearRegressionIncomeStationsPredictor.h"
 
@@ -27,6 +28,18 @@ std::unique_ptr<IIncomeStationsPredictor> IncomeStationsPredictorFactory::make(
 	MetricScope scope)
 {
 	return std::make_unique<CogorthyIncomeStationsPredictor>(
+		incomeLoadEstimator,
+		dynamicFrameSettings,
+		std::move(scope));
+}
+
+std::unique_ptr<IIncomeStationsPredictor> IncomeStationsPredictorFactory::make(
+	std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
+	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
+	BackoffAwareCogorthyIncomeStationsPredictorConfig&&,
+	MetricScope scope)
+{
+	return std::make_unique<BackoffAwareCogorthyIncomeStationsPredictor>(
 		incomeLoadEstimator,
 		dynamicFrameSettings,
 		std::move(scope));
