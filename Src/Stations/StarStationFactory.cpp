@@ -15,7 +15,8 @@ std::shared_ptr<IStarStation> StarStationFactory::make(StarStationInitData&& ini
 		std::move(initData.dynamicFrameSettings),
 		TrafficProfileFactory::make(CbrTrafficProfileConfig{}),
 		initData.id, initData.messagesNeeded,
-		initData.tts, initData.rng);
+		initData.tts, initData.rng,
+		std::move(initData.statsCollector));
 }
 
 } // namespace starTopologyEmulator

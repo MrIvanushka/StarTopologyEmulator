@@ -20,9 +20,11 @@ BacklogFeedbackFtpGenerator::BacklogFeedbackFtpGenerator(
     , _lastRaSlots(_config.R0)
 {}
 
-StarHubPlanMessage::FtpConfig BacklogFeedbackFtpGenerator::generate(std::uint64_t frame)
+StarHubPlanMessage::FtpConfig BacklogFeedbackFtpGenerator::generate(
+        std::uint64_t currentFrame,
+        std::uint64_t targetFrame)
 {
-    const double jRa = _predictor->estimateReadyUsers(frame, frame);
+    const double jRa = _predictor->estimateReadyUsers(currentFrame, targetFrame);
 
     const double bitsPerSlot = static_cast<double>(
         std::max<std::uint64_t>(1ULL, _frameCalculator->frameConfig().bitsPerSlot));

@@ -15,7 +15,9 @@ public:
 		std::uint8_t yellowSlotsCount,
 		std::uint8_t operationSlotsCount);
 
-	StarHubPlanMessage::FtpConfig generate(std::uint64_t frame) override;
+	StarHubPlanMessage::FtpConfig generate(
+		std::uint64_t currentFrame,
+		std::uint64_t targetFrame) override;
 private:
 	StarHubPlanMessage::FtpConfig _config;
 };

@@ -16,7 +16,8 @@ void CommonFrameCalculator::correctTimeShift(Timestamp howMuch)
 
 FrameMoment CommonFrameCalculator::frameMoment(Timestamp time) const
 {
-	time -= _frameConfig.epoch + tts();
+	time -= _frameConfig.epoch - tts();
+	time = time > 0 ? time : 0;
 	auto totalSlotCount = time / _frameConfig.slotDuration;
 	auto timeAfterSlotBegin = time % _frameConfig.slotDuration;
 

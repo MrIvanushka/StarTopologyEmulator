@@ -4,10 +4,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "Helpers.h"
 #include "Mocks/MockFrameCalculator.h"
 #include "Mocks/MockStarHub.h"
 #include "Mocks/MockStarStation.h"
 #include "StarTopologyEmulator/EmulatorFactory.h"
+#include "StarTopologyEmulator/FrameCalculatorFactory.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/Messages/StarStationMessage.h"
 #include "StarTopologyEmulator/TerminalState.h"
@@ -17,6 +19,7 @@ using namespace tests;
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::SaveArg;
 
 namespace
 {
@@ -32,13 +35,15 @@ struct EmulatorFixture
 	std::vector<EmulatorInitData::SendFunc> stationSendFuncs;
 	std::shared_ptr<NiceMock<MockStarHub>> hub;
 	EmulatorInitData::SendFunc hubSendFunc;
-	NiceMock<MockFrameCalculator>* frameCalc = nullptr;
+	NiceMock<MockFrameCalculator>* abonentFrameCalc = nullptr;
+	NiceMock<MockFrameCalculator>* hubFrameCalc = nullptr;
 
 	std::unique_ptr<IEmulator> makeEmulator(int stationCount)
 	{
 		EmulatorInitData init;
 
-		init.stationFactory = [this](EmulatorInitData::SendFunc sendFunc, StationID stationID) {
+		init.stationFactory = [this](EmulatorInitData::SendFunc sendFunc, StationID stationID,
+			std::shared_ptr<IStationStatsCollector>) {
 			auto station = std::make_shared<NiceMock<MockStarStation>>();
 			ON_CALL(*station, id()).WillByDefault(Return(stationID));
 			ON_CALL(*station, currentState()).WillByDefault(Return(TerminalState::ACQUISITION));
@@ -56,27 +61,36 @@ struct EmulatorFixture
 			return hub;
 		};
 
-		auto fc = std::make_unique<NiceMock<MockFrameCalculator>>();
-		frameCalc = fc.get();
-
 		FrameConfig cfg{};
 		cfg.slotCountInFrame = kSlotsPerFrame;
 		cfg.slotDuration = kSlotDuration;
 		cfg.epoch = 0;
-		ON_CALL(*frameCalc, frameConfig()).WillByDefault(Return(cfg));
-		ON_CALL(*frameCalc, frameMoment(_)).WillByDefault([](Timestamp t) {
-			FrameMoment fm{};
-			fm.frameNumber = static_cast<std::uint64_t>(t / kFrameDuration);
-			fm.slotNumber = static_cast<std::uint64_t>((t % kFrameDuration) / kSlotDuration);
-			fm.timeOfSlot = static_cast<double>(t);
-			return fm;
-		});
-		ON_CALL(*frameCalc, slotBeginTime(_, _)).WillByDefault(
-			[](IFrameCalculator::FrameNum f, IFrameCalculator::SlotNum s) {
-				return static_cast<Timestamp>(f * kFrameDuration + s * kSlotDuration);
-			});
 
-		init.frameCalculator = std::move(fc);
+		auto setupCalc = [&cfg](NiceMock<MockFrameCalculator>* fc) {
+			ON_CALL(*fc, frameConfig()).WillByDefault(Return(cfg));
+			ON_CALL(*fc, frameMoment(_)).WillByDefault([](Timestamp t) {
+				FrameMoment fm{};
+				fm.frameNumber = static_cast<std::uint64_t>(t / kFrameDuration);
+				fm.slotNumber = static_cast<std::uint64_t>((t % kFrameDuration) / kSlotDuration);
+				fm.timeOfSlot = static_cast<double>(t);
+				return fm;
+			});
+			ON_CALL(*fc, slotBeginTime(_, _)).WillByDefault(
+				[](IFrameCalculator::FrameNum f, IFrameCalculator::SlotNum s) {
+					return static_cast<Timestamp>(f * kFrameDuration + s * kSlotDuration);
+				});
+		};
+
+		auto abonentFc = std::make_unique<NiceMock<MockFrameCalculator>>();
+		abonentFrameCalc = abonentFc.get();
+		setupCalc(abonentFrameCalc);
+
+		auto hubFc = std::make_unique<NiceMock<MockFrameCalculator>>();
+		hubFrameCalc = hubFc.get();
+		setupCalc(hubFrameCalc);
+
+		init.abonentFrameCalculator = std::move(abonentFc);
+		init.hubFrameCalculator = std::move(hubFc);
 		init.stationCount = stationCount;
 
 		return EmulatorFactory::make(std::move(init));
@@ -177,8 +191,6 @@ TEST(Emulator, CollidingStationMessagesProduceCollisionReport)
 	EmulatorFixture fix;
 	auto emu = fix.makeEmulator(/*stationCount=*/2);
 
-	// Two stations send at the same instant: the hub should receive exactly one
-	// (collision) message after the queue is drained.
 	EXPECT_CALL(*fix.hub, handleMessage(_, _)).Times(1);
 
 	fix.stationSendFuncs[0](/*sendTime=*/0, std::make_shared<StarStationMessage>(0));
@@ -207,4 +219,67 @@ TEST(Emulator, LongSimulationDoesNotCrash)
 
 	for (const auto& s : emu->stations())
 		EXPECT_NO_THROW(s->currentState());
+}
+
+TEST(Emulator, MessageSentAtAbonentFrame1Slot2ArrivesAtHubFrame1Slot2)
+{
+	constexpr Timestamp kTts = 100;
+
+	auto frameCfg = makeFrameConfig(kSlotsPerFrame, kSlotDuration);
+	auto abonentCalc = FrameCalculatorFactory::abonentCalculator(frameCfg, kTts);
+	auto hubCalc = FrameCalculatorFactory::hubCalculator(frameCfg, kTts);
+	auto* abonentCalcPtr = abonentCalc.get();
+	auto* hubCalcPtr = hubCalc.get();
+
+	std::shared_ptr<NiceMock<MockStarStation>> station;
+	EmulatorInitData::SendFunc stationSendFunc;
+	std::shared_ptr<NiceMock<MockStarHub>> hub;
+
+	EmulatorInitData init;
+	init.stationFactory = [&](EmulatorInitData::SendFunc sendFunc, StationID stationID,
+		std::shared_ptr<IStationStatsCollector>) {
+		station = std::make_shared<NiceMock<MockStarStation>>();
+		ON_CALL(*station, id()).WillByDefault(Return(stationID));
+		ON_CALL(*station, currentState()).WillByDefault(Return(TerminalState::ACQUISITION));
+		ON_CALL(*station, tts()).WillByDefault(Return(kTts));
+		ON_CALL(*station, joinedTime()).WillByDefault(Return(std::nullopt));
+		stationSendFunc = sendFunc;
+		return station;
+	};
+	init.hubFactory = [&](EmulatorInitData::SendFunc) {
+		hub = std::make_shared<NiceMock<MockStarHub>>();
+		ON_CALL(*hub, tts()).WillByDefault(Return(kTts));
+		return hub;
+	};
+	init.abonentFrameCalculator = std::move(abonentCalc);
+	init.hubFrameCalculator = std::move(hubCalc);
+	init.stationCount = 1;
+
+	auto emu = EmulatorFactory::make(std::move(init));
+
+	Timestamp sendTime = 0;
+	for (Timestamp t = 0; t < EmulatorFixture::framesToTime(10); ++t)
+	{
+		const auto fm = abonentCalcPtr->frameMoment(t);
+		if (fm.frameNumber == 1 && fm.slotNumber == 2)
+		{
+			sendTime = t;
+			break;
+		}
+	}
+	const auto sendMoment = abonentCalcPtr->frameMoment(sendTime);
+	ASSERT_EQ(sendMoment.frameNumber, 1u);
+	ASSERT_EQ(sendMoment.slotNumber, 2u);
+
+	Timestamp receivedTime = -1;
+	EXPECT_CALL(*hub, handleMessage(_, _)).WillOnce(SaveArg<1>(&receivedTime));
+
+	auto msg = std::make_shared<StarStationMessage>(/*id=*/0);
+	stationSendFunc(sendTime, msg);
+
+	emu->update(EmulatorFixture::framesToTime(10));
+
+	const auto recvMoment = hubCalcPtr->frameMoment(receivedTime);
+	EXPECT_EQ(recvMoment.frameNumber, 1u);
+	EXPECT_EQ(recvMoment.slotNumber, 2u);
 }

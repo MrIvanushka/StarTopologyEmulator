@@ -1,8 +1,8 @@
 #pragma once
 
-#include <deque>
 #include <memory>
 
+#include "StarTopologyEmulator/IFaces/IAntiWindup.h"
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IIncomeLoadController.h"
 #include "StarTopologyEmulator/IFaces/IIncomeStationsPredictor.h"
@@ -35,15 +35,16 @@ private:
 
 	double clampProbability(double value) const;
 	double clampStep(double delta) const;
-	double pushAndIntegrate(double error);
 
 	const PiLoadControllerConfig _config;
 
 	std::shared_ptr<IDynamicFrameSettings> _dynamicFrameSettings;
 	std::shared_ptr<IIncomeStationsPredictor> _readyUsersPredictor;
 
-	std::deque<double> _errorWindow;
-	double _errorSum = 0.0;
+	std::unique_ptr<IAntiWindup> _antiWindup;
+
+	double _integral = 0.0;
+	double _leakFactor = 0.0;
 
 	StarHubPlanMessage::BackoffConfig _lastOutput;
 

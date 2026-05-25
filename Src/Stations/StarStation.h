@@ -4,6 +4,7 @@
 #include <random>
 
 #include "StarTopologyEmulator/IFaces/IStarStation.h"
+#include "StarTopologyEmulator/IFaces/IStationStatsCollector.h"
 #include "StarTopologyEmulator/IFaces/ITrafficProfile.h"
 #include "StarTopologyEmulator/StateMachine/StateMachine.h"
 #include "StationContext.h"
@@ -22,7 +23,8 @@ public:
 		StationID id,
 		int messagesNeeded,
 		Timestamp tts,
-		std::mt19937& rng);
+		std::mt19937& rng,
+		std::shared_ptr<IStationStatsCollector> stats = nullptr);
 
 	void update(Timestamp currentTime) override;
 

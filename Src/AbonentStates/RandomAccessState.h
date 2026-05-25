@@ -18,6 +18,10 @@ private:
 
 	void handleCollision(std::shared_ptr<StarHubPlanMessage>);
 
+	void handleObservedCollision(std::shared_ptr<StarHubPlanMessage>);
+
+	void handleSuccess(std::shared_ptr<StarHubPlanMessage>);
+
 	void planFrameAttempt(std::shared_ptr<StarHubPlanMessage>);
 
 	void transmit();
@@ -30,6 +34,11 @@ private:
 	std::uint64_t _decisionFrame = 0;
 	bool _decisionMade = false;
 	int _chosenSlot = -1;
+
+	int _deliveredSnapshot = 0;
+
+	std::uint64_t _lastObservedPlanFrame = 0;
+	bool _ownCollisionSinceLastPlan = false;
 };
 
 } // namespace starTopologyEmulator

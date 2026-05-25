@@ -2,6 +2,7 @@
 
 #include "BackoffAwareCogorthyIncomeStationsPredictor.h"
 #include "CogorthyIncomeStationsPredictor.h"
+#include "GreyModelIncomeStationsPredictor.h"
 #include "LinearRegressionIncomeStationsPredictor.h"
 
 namespace starTopologyEmulator
@@ -42,6 +43,19 @@ std::unique_ptr<IIncomeStationsPredictor> IncomeStationsPredictorFactory::make(
 	return std::make_unique<BackoffAwareCogorthyIncomeStationsPredictor>(
 		incomeLoadEstimator,
 		dynamicFrameSettings,
+		std::move(scope));
+}
+
+std::unique_ptr<IIncomeStationsPredictor> IncomeStationsPredictorFactory::make(
+	std::shared_ptr<IIncomeLoadEstimator> incomeLoadEstimator,
+	std::shared_ptr<IDynamicFrameSettings> dynamicFrameSettings,
+	GreyModelIncomeStationsPredictorConfig&& config,
+	MetricScope scope)
+{
+	return std::make_unique<GreyModelIncomeStationsPredictor>(
+		incomeLoadEstimator,
+		dynamicFrameSettings,
+		std::move(config),
 		std::move(scope));
 }
 

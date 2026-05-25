@@ -10,7 +10,8 @@ std::unique_ptr<IEmulator> EmulatorFactory::make(EmulatorInitData initData)
 	return std::make_unique<Emulator>(
 		initData.stationFactory,
 		initData.hubFactory,
-		std::move(initData.frameCalculator),
+		std::move(initData.abonentFrameCalculator),
+		std::move(initData.hubFrameCalculator),
 		initData.stationCount,
 		std::move(initData.metricSink));
 }

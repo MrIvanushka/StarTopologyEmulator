@@ -22,7 +22,9 @@ public:
         std::shared_ptr<IFrameCalculator>,
         MarginalUtilityFtpGeneratorConfig&&);
 
-    StarHubPlanMessage::FtpConfig generate(std::uint64_t frame) override;
+    StarHubPlanMessage::FtpConfig generate(
+            std::uint64_t currentFrame,
+            std::uint64_t targetFrame) override;
 
 private:
     const MarginalUtilityFtpGeneratorConfig _config;

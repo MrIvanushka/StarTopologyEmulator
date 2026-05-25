@@ -27,6 +27,8 @@ private:
 	const PseudoBayesianLoadControllerConfig _config;
 	std::shared_ptr<IIncomeStationsPredictor> _readyUsersPredictor;
 
+	double _lastPTx;
+
 	MetricScope _scope;
 	MetricHandle _hPTx = kInvalidMetricHandle;
 	MetricHandle _hN = kInvalidMetricHandle;

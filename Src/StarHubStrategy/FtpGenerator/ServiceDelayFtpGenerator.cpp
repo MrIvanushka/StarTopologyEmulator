@@ -31,11 +31,13 @@ double ServiceDelayFtpGenerator::delayDa(double qDaSlots, double dSlots) const
     return qDaSlots / std::max(dSlots, 1.0);
 }
 
-StarHubPlanMessage::FtpConfig ServiceDelayFtpGenerator::generate(std::uint64_t frame)
+StarHubPlanMessage::FtpConfig ServiceDelayFtpGenerator::generate(
+        std::uint64_t currentFrame,
+        std::uint64_t targetFrame)
 {
-    const double nHat = _predictor->estimateReadyUsers(frame, frame);
+    const double nHat = _predictor->estimateReadyUsers(currentFrame, targetFrame);
 
-    const auto currentPlan = _dynamicFrameSettings->currentPlan(frame);
+    const auto currentPlan = _dynamicFrameSettings->currentPlan(currentFrame);
     const double ptx = currentPlan ? currentPlan->backoff().pTx : 0.5;
     const double wb = currentPlan
         ? static_cast<double>(currentPlan->backoff().baseWindow)

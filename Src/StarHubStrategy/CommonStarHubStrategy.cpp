@@ -22,7 +22,7 @@ CommonStarHubStrategy::CommonStarHubStrategy(
 
 std::shared_ptr<StarHubPlanMessage> CommonStarHubStrategy::generate(std::uint64_t currentFrame, std::uint64_t targetFrame)
 {
-	auto ftp = _ftpGenerator->generate(targetFrame);
+	auto ftp = _ftpGenerator->generate(currentFrame, targetFrame);
 	auto backoff = _incomeLoadController->generate(ftp.randomAccessSlotsCountInFrame, currentFrame, targetFrame);
 	_lastPlan = std::make_shared<StarHubPlanMessage>(targetFrame, ftp, backoff);
 

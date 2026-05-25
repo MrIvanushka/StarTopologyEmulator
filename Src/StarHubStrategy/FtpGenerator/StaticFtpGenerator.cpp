@@ -13,7 +13,9 @@ StaticFtpGenerator::StaticFtpGenerator(
 	: _config{ operationSlotsCount, yellowSlotsCount, raSlotsCount }
 { }
 
-StarHubPlanMessage::FtpConfig StaticFtpGenerator::generate(std::uint64_t frame)
+StarHubPlanMessage::FtpConfig StaticFtpGenerator::generate(
+	std::uint64_t currentFrame,
+	std::uint64_t targetFrame)
 {
 	return _config;
 }

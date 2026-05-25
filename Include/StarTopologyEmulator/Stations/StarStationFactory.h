@@ -9,6 +9,7 @@
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IStarStation.h"
+#include "StarTopologyEmulator/IFaces/IStationStatsCollector.h"
 
 namespace starTopologyEmulator
 {
@@ -22,6 +23,7 @@ struct STAR_TOPOLOGY_EMULATOR_LIB_EXPORT StarStationInitData
 	int messagesNeeded = 3;
 	Timestamp tts = 100;
 	std::mt19937& rng;
+	std::shared_ptr<IStationStatsCollector> statsCollector;
 };
 
 class STAR_TOPOLOGY_EMULATOR_LIB_EXPORT StarStationFactory

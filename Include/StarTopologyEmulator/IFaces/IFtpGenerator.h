@@ -13,7 +13,9 @@ class IFtpGenerator
 public:
 	virtual ~IFtpGenerator() = default;
 
-	virtual StarHubPlanMessage::FtpConfig generate(std::uint64_t frame) = 0;
+	virtual StarHubPlanMessage::FtpConfig generate(
+		std::uint64_t currentFrame,
+		std::uint64_t targetFrame) = 0;
 };
 
 } // namespace starTopologyEmulator

@@ -9,6 +9,7 @@
 #include "StarTopologyEmulator/IFaces/IStarHub.h"
 #include "StarTopologyEmulator/IFaces/IStarHubStrategy.h"
 #include "StarTopologyEmulator/IFaces/IStarStation.h"
+#include "StarTopologyEmulator/IFaces/IStationStatsCollector.h"
 #include "StarTopologyEmulator/Metrics/MetricSink.h"
 
 namespace starTopologyEmulator
@@ -20,8 +21,9 @@ public:
 	using SendFunc = std::function<void(Timestamp, std::shared_ptr<IMessage>)>;
 
 	Emulator(
-		std::function<std::shared_ptr<IStarStation>(SendFunc, StationID)>,
+		std::function<std::shared_ptr<IStarStation>(SendFunc, StationID, std::shared_ptr<IStationStatsCollector>)>,
 		std::function<std::shared_ptr<IStarHub>(SendFunc)>,
+		std::unique_ptr<IFrameCalculator>,
 		std::unique_ptr<IFrameCalculator>,
 		int stationCount,
 		std::shared_ptr<IMetricSink> metricSink = nullptr);
@@ -66,7 +68,8 @@ private:
 private:
 	void storeInputLoadAndPlr(std::uint64_t completedFrame);
 
-	std::unique_ptr<IFrameCalculator> _frameCalculator;
+	std::unique_ptr<IFrameCalculator> _abonentFrameCalculator;
+	std::unique_ptr<IFrameCalculator> _hubFrameCalculator;
 
 	std::shared_ptr<IStarHub> _hub;
 	std::vector<std::shared_ptr<IStarStation>> _stations;
@@ -86,6 +89,7 @@ private:
 	MetricHandle _hStationsOff = kInvalidMetricHandle;
 	MetricHandle _hIncomeLoad = kInvalidMetricHandle;
 	MetricHandle _hPlr = kInvalidMetricHandle;
+	std::shared_ptr<IStationStatsCollector> _stationStats;
 };
 
 } // namespace starTopologyEmulator

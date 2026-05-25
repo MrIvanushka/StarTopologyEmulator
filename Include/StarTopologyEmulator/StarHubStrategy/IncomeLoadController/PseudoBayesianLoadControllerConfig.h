@@ -11,6 +11,9 @@ struct STAR_TOPOLOGY_EMULATOR_LIB_EXPORT PseudoBayesianLoadControllerConfig
 	double minProbability = 1e-3;
 	double maxProbability = 1.0;
 
+	double maxStepUp = 1.0;
+	double maxStepDown = 1.0;
+
 	StarHubPlanMessage::BackoffConfig backoffTemplate;
 
 	double epsilon = 1e-9;

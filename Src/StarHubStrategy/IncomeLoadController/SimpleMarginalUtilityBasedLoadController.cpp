@@ -30,6 +30,9 @@ StarHubPlanMessage::BackoffConfig SimpleMarginalUtilityBasedLoadController::gene
 {
 	const auto& currentPlan = _dynamicFrameSettings->currentPlan(currentFrame);
 
+	if (!currentPlan)
+		return _config.backoffTemplate;
+
 	const double currentP = currentPlan->backoff().pTx;
 	const std::uint32_t currentBackoff = currentPlan->backoff().baseWindow;
 
@@ -44,7 +47,7 @@ StarHubPlanMessage::BackoffConfig SimpleMarginalUtilityBasedLoadController::gene
 		std::min(rawDelta, _config.maxProbabilityStep),
 		-_config.maxProbabilityStep);
 
-	StarHubPlanMessage::BackoffConfig result;
+	StarHubPlanMessage::BackoffConfig result = _config.backoffTemplate;
 	result.pTx = clampProbability(currentP + limitedDelta);
 	result.baseWindow = currentBackoff;
 

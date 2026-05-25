@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "AntiWindup/AntiWindupFactory.h"
+
 namespace starTopologyEmulator
 {
 
@@ -13,6 +15,10 @@ PiLoadController::PiLoadController(
 	: _config(std::move(config))
 	, _dynamicFrameSettings(dynamicFrameSettings)
 	, _readyUsersPredictor(readyUsersPredictor)
+	, _antiWindup(AntiWindupFactory::make(_config.antiWindup))
+	, _leakFactor(_config.integralWindowFrames > 0
+		? 1.0 / static_cast<double>(_config.integralWindowFrames)
+		: 0.0)
 	, _lastOutput(_config.backoffTemplate)
 	, _scope(std::move(scope))
 {
@@ -49,13 +55,27 @@ StarHubPlanMessage::BackoffConfig PiLoadController::generate(
 		plannedRaSlots);
 
 	const double error = _config.gTarget - estimatedLoad;
-	const double integral = pushAndIntegrate(error);
 
-	const double u = _config.kP * error + _config.kI * integral;
+	const double u = _config.kP * error + _integral;
 	const double delta = clampStep(_config.alpha * u);
 
+	const double pUnclamped = (_config.allowFeedForward ? plannedRaSlots / readyUsers : currentPTx) + delta;
+	const double pClamped = clampProbability(pUnclamped);
+
+	const IAntiWindup::Step antiWindupStep{
+		_integral,
+		pUnclamped,
+		pClamped,
+		error,
+		_config.kP,
+		_config.kI,
+	};
+	const double correction = _antiWindup->correction(antiWindupStep);
+
+	_integral = (1.0 - _leakFactor) * _integral + _config.kI * error - correction;
+
 	StarHubPlanMessage::BackoffConfig result = _config.backoffTemplate;
-	result.pTx = clampProbability(currentPTx + delta);
+	result.pTx = pClamped;
 
 	_lastOutput = result;
 
@@ -86,20 +106,6 @@ double PiLoadController::clampProbability(double value) const
 double PiLoadController::clampStep(double delta) const
 {
 	return std::max(-_config.maxProbabilityStep, std::min(delta, _config.maxProbabilityStep));
-}
-
-double PiLoadController::pushAndIntegrate(double error)
-{
-	_errorWindow.push_back(error);
-	_errorSum += error;
-
-	while (_errorWindow.size() > _config.integralWindowFrames && !_errorWindow.empty())
-	{
-		_errorSum -= _errorWindow.front();
-		_errorWindow.pop_front();
-	}
-
-	return _errorSum;
 }
 
 } // namespace starTopologyEmulator

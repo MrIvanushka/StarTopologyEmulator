@@ -55,9 +55,9 @@ double BackoffAwareCogorthyIncomeStationsPredictor::calculateImpact(
 		return 0.0;
 
 	const auto& backoff = impactFramePlan->backoff();
-	int W = backoff.useExponential
-		? static_cast<int>(backoff.baseWindow * backoff.exponentBase)
-		: static_cast<int>(backoff.baseWindow);
+	int W = backoff.backoffType == StarHubPlanMessage::BackoffType::NONE
+		? static_cast<int>(backoff.baseWindow)
+		: static_cast<int>(backoff.baseWindow * backoff.exponentBase);
 	if (W < 1)
 		W = 1;
 

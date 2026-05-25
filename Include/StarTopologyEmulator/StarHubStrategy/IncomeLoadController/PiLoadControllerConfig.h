@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "StarTopologyEmulator/Messages/StarHubPlanMessage.h"
+#include "StarTopologyEmulator/StarHubStrategy/IncomeLoadController/AntiWindup/PiAntiWindupConfig.h"
 #include "StarTopologyEmulator/StarTopologyEmulatorExport.h"
 
 namespace starTopologyEmulator
@@ -25,6 +26,10 @@ struct STAR_TOPOLOGY_EMULATOR_LIB_EXPORT PiLoadControllerConfig
 	StarHubPlanMessage::BackoffConfig backoffTemplate;
 
 	double epsilon = 1e-9;
+
+	PiAntiWindupConfig antiWindup = NoneAntiWindupConfig{};
+
+	bool allowFeedForward = false;
 };
 
 } // namespace starTopologyEmulator

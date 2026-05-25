@@ -30,7 +30,7 @@ std::shared_ptr<StarHubPlanMessage> SimpleStarHubStrategy::generate(std::uint64_
 	const int raSlotsCount = calculateRaSlots(g, plr);
 
 	StarHubPlanMessage::BackoffConfig backoff{};
-	backoff.useExponential = true;
+	backoff.backoffType = StarHubPlanMessage::BackoffType::BEB;
 	backoff.exponentBase = 2.0;
 
 	double loadFactor = std::clamp(g / _cfg.heavyLoadG, 0.0, 1.0);

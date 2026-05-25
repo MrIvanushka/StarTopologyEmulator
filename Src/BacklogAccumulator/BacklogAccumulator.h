@@ -4,6 +4,7 @@
 #include <map>
 
 #include "StarTopologyEmulator/IFaces/IBacklogAccumulator.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 
 namespace starTopologyEmulator
 {
@@ -11,7 +12,7 @@ namespace starTopologyEmulator
 class BacklogAccumulator : public IBacklogAccumulator
 {
 public:
-	explicit BacklogAccumulator(std::uint64_t bitsPerSlot);
+	BacklogAccumulator(std::uint64_t bitsPerSlot, MetricScope scope = {});
 
 	void handleReport(std::shared_ptr<BacklogReportMessage>) override;
 
@@ -26,6 +27,9 @@ public:
 private:
 	std::uint64_t _bitsPerSlot;
 	std::map<StationID, std::uint64_t> _backlogs;
+	MetricScope _scope;
+	MetricHandle _hTotalBacklog = kInvalidMetricHandle;
+	MetricHandle _hDaOccupiedBits = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

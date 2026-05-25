@@ -40,7 +40,7 @@ inline std::shared_ptr<StarHubPlanMessage> makePlan(
 	backoff.pTx = pTx;
 	backoff.baseWindow = baseWindow;
 	backoff.maxWindow = 32;
-	backoff.useExponential = false;
+	backoff.backoffType = StarHubPlanMessage::BackoffType::NONE;
 	backoff.exponentBase = 2.0;
 
 	return std::make_shared<StarHubPlanMessage>(frame, ftp, backoff);

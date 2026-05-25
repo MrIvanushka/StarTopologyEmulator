@@ -1,5 +1,8 @@
 #include "RandomAccessState.h"
 
+#include <algorithm>
+#include <cmath>
+
 #include "StarTopologyEmulator/Messages/StarStationMessage.h"
 #include "StarTopologyEmulator/TerminalState.h"
 
@@ -26,12 +29,30 @@ void RandomAccessState::onUpdate()
 	_lastProcessedFrame = moment.frameNumber;
 	_lastProcessedSlot = moment.slotNumber;
 
+	if (_context->messagesDelivered > _deliveredSnapshot)
+	{
+		handleSuccess(plan);
+		_deliveredSnapshot = _context->messagesDelivered;
+	}
+
 	if (_context->now - _context->lastSendTime >= _context->ackTimeout && _context->transmitStatus != StationContext::TryingToSend)
 	{
 		if (_context->transmitStatus == StationContext::WaitingForAcq)
 			handleCollision(plan);
 
 		_context->transmitStatus = StationContext::TryingToSend;
+	}
+
+	if (plan->frame() != _lastObservedPlanFrame)
+	{
+		if (plan->backoff().backoffType == StarHubPlanMessage::BackoffType::LMILD
+			&& plan->collidedStationCount() > 0
+			&& !_ownCollisionSinceLastPlan)
+		{
+			handleObservedCollision(plan);
+		}
+		_lastObservedPlanFrame = plan->frame();
+		_ownCollisionSinceLastPlan = false;
 	}
 
 	if (moment.slotNumber >= plan->randomAccessSlotsCountInFrame())
@@ -56,18 +77,69 @@ void RandomAccessState::onUpdate()
 void RandomAccessState::handleCollision(std::shared_ptr<StarHubPlanMessage> plan)
 {
 	_context->attempts++;
+	_ownCollisionSinceLastPlan = true;
 
 	const auto& cfg = plan->backoff();
+	const int wMin = std::max<int>(1, cfg.baseWindow);
+	const int wMax = std::max<int>(wMin, cfg.maxWindow);
 
-	double windowSize = cfg.baseWindow;
-	if (cfg.useExponential)
+	int windowSize = wMin;
+	switch (cfg.backoffType)
 	{
-		windowSize = cfg.baseWindow * std::pow(cfg.exponentBase, std::min((int)_context->attempts, 10));
+	case StarHubPlanMessage::BackoffType::NONE:
+		windowSize = wMin;
+		break;
+	case StarHubPlanMessage::BackoffType::BEB:
+	{
+		const double w = cfg.baseWindow * std::pow(cfg.exponentBase, std::min(_context->attempts, 10));
+		windowSize = static_cast<int>(std::clamp(w, static_cast<double>(wMin), static_cast<double>(wMax)));
+		break;
 	}
-	windowSize = std::clamp(windowSize, (double)cfg.baseWindow, (double)cfg.maxWindow);
+	case StarHubPlanMessage::BackoffType::MILD:
+	case StarHubPlanMessage::BackoffType::LMILD:
+	{
+		const int prev = _context->currentWindow > 0 ? _context->currentWindow : wMin;
+		const double w = prev * cfg.exponentBase;
+		windowSize = std::min<int>(static_cast<int>(w), wMax);
+		windowSize = std::max(windowSize, wMin);
+		_context->currentWindow = windowSize;
+		break;
+	}
+	}
 
-	std::uniform_int_distribution<int> dist(1, static_cast<int>(windowSize));
+	std::uniform_int_distribution<int> dist(1, windowSize);
 	_context->backoffRemaining = dist(*_context->rng);
+}
+
+void RandomAccessState::handleObservedCollision(std::shared_ptr<StarHubPlanMessage> plan)
+{
+	const auto& cfg = plan->backoff();
+	const int wMin = std::max<int>(1, cfg.baseWindow);
+	const int wMax = std::max<int>(wMin, cfg.maxWindow);
+	const int delta = std::max<int>(1, cfg.additiveStep);
+
+	const int prev = _context->currentWindow > 0 ? _context->currentWindow : wMin;
+	_context->currentWindow = std::min(prev + delta, wMax);
+}
+
+void RandomAccessState::handleSuccess(std::shared_ptr<StarHubPlanMessage> plan)
+{
+	const auto& cfg = plan->backoff();
+	const int wMin = std::max<int>(1, cfg.baseWindow);
+
+	if (cfg.backoffType == StarHubPlanMessage::BackoffType::MILD)
+	{
+		const int prev = _context->currentWindow > 0 ? _context->currentWindow : wMin;
+		_context->currentWindow = std::max(prev - 1, wMin);
+	}
+	else if (cfg.backoffType == StarHubPlanMessage::BackoffType::LMILD)
+	{
+		const int prev = _context->currentWindow > 0 ? _context->currentWindow : wMin;
+		const int delta = std::max<int>(1, cfg.additiveStep);
+		_context->currentWindow = std::max(prev - delta, wMin);
+	}
+
+	_context->attempts = 0;
 }
 
 void RandomAccessState::planFrameAttempt(std::shared_ptr<StarHubPlanMessage> plan)
@@ -82,6 +154,9 @@ void RandomAccessState::planFrameAttempt(std::shared_ptr<StarHubPlanMessage> pla
 		_context->backoffRemaining -= 1;
 		return;
 	}
+
+	if (_context->stats)
+		_context->stats->onPtxCheck(_decisionFrame);
 
 	std::uniform_real_distribution<double> coin(0.0, 1.0);
 	if (coin(*_context->rng) >= plan->backoff().pTx)

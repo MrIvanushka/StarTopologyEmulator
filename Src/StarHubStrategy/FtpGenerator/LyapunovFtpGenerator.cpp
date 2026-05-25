@@ -35,11 +35,13 @@ double LyapunovFtpGenerator::penalty(double r, double nHat, double ptx) const
     return inefficiency * inefficiency;
 }
 
-StarHubPlanMessage::FtpConfig LyapunovFtpGenerator::generate(std::uint64_t frame)
+StarHubPlanMessage::FtpConfig LyapunovFtpGenerator::generate(
+        std::uint64_t currentFrame,
+        std::uint64_t targetFrame)
 {
-    const double qRa = _predictor->estimateReadyUsers(frame, frame);
+    const double qRa = _predictor->estimateReadyUsers(currentFrame, targetFrame);
 
-    const auto currentPlan = _dynamicFrameSettings->currentPlan(frame);
+    const auto currentPlan = _dynamicFrameSettings->currentPlan(currentFrame);
     const double ptx = currentPlan ? currentPlan->backoff().pTx : 0.5;
 
     const double bitsPerSlot = static_cast<double>(

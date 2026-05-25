@@ -19,7 +19,8 @@ StarStation::StarStation(
 	StationID id,
 	int messagesNeeded,
 	Timestamp tts,
-	std::mt19937& rng)
+	std::mt19937& rng,
+	std::shared_ptr<IStationStatsCollector> stats)
 	: _tts(tts)
 	, _rng(rng)
 {
@@ -30,9 +31,10 @@ StarStation::StarStation(
 	_context->trafficProfile = std::move(trafficProfile);
 	_context->messagesNeeded = messagesNeeded;
 	const auto& frameConfig = _context->frameCalculator->frameConfig();
-	_context->ackTimeout = 2 * frameConfig.slotDuration * frameConfig.slotCountInFrame + 5 * tts;
+	_context->ackTimeout = 5 * tts;
 	_context->rng = &_rng;
 	_context->sendFunc = std::move(sendFunc);
+	_context->stats = std::move(stats);
 
 	buildStateMachine();
 }

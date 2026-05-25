@@ -8,6 +8,7 @@
 #include "StarTopologyEmulator/CommonTypedefs.h"
 #include "StarTopologyEmulator/IFaces/IDynamicFrameSettings.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
+#include "StarTopologyEmulator/IFaces/IStationStatsCollector.h"
 #include "StarTopologyEmulator/IFaces/ITrafficProfile.h"
 #include "StarTopologyEmulator/Messages/StarHubPlanMessage.h"
 
@@ -34,6 +35,7 @@ struct StationContext
 	int messagesDelivered = 0;
 	int attempts = 0;
 	int backoffRemaining = 0;
+	int currentWindow = 0;
 
 	TransitStatus transmitStatus = TryingToSend;
 	Timestamp lastSendTime = 0;
@@ -43,6 +45,7 @@ struct StationContext
 
 	std::mt19937* rng = nullptr;
 	std::function<void(Timestamp, std::shared_ptr<IMessage>)> sendFunc;
+	std::shared_ptr<IStationStatsCollector> stats;
 
 	std::optional<Timestamp> joinedTime;
 

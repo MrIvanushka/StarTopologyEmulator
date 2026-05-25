@@ -1,13 +1,21 @@
 #include "BacklogAccumulator.h"
 
+#include <algorithm>
 #include <vector>
 
 namespace starTopologyEmulator
 {
 
-BacklogAccumulator::BacklogAccumulator(std::uint64_t bitsPerSlot)
+BacklogAccumulator::BacklogAccumulator(std::uint64_t bitsPerSlot, MetricScope scope)
 	: _bitsPerSlot(bitsPerSlot)
-{}
+	, _scope(std::move(scope))
+{
+	if (_scope.active())
+	{
+		_hTotalBacklog = _scope.registerMetric("Суммарный бэклог абонентских станций");
+		_hDaOccupiedBits = _scope.registerMetric("Объём трафика в DA-сегменте");
+	}
+}
 
 void BacklogAccumulator::handleReport(std::shared_ptr<BacklogReportMessage> report)
 {
@@ -38,6 +46,9 @@ std::shared_ptr<OperationPlanMessage> BacklogAccumulator::generateOperationPlan(
 	std::uint64_t totalBacklog = 0;
 	for (const auto& [_, bits] : _backlogs)
 		totalBacklog += bits;
+
+	_scope.emit(_hTotalBacklog, frameNumber, static_cast<double>(totalBacklog));
+	_scope.emit(_hDaOccupiedBits, frameNumber, static_cast<double>(std::min(totalBacklog, totalBits)));
 
 	if (totalBits == 0 || totalBacklog == 0)
 	{

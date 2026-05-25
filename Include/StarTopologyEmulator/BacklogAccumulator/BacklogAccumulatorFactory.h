@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "StarTopologyEmulator/IFaces/IBacklogAccumulator.h"
+#include "StarTopologyEmulator/Metrics/MetricSink.h"
 #include "StarTopologyEmulator/StarTopologyEmulatorExport.h"
 
 namespace starTopologyEmulator
@@ -12,7 +13,7 @@ namespace starTopologyEmulator
 class STAR_TOPOLOGY_EMULATOR_LIB_EXPORT BacklogAccumulatorFactory
 {
 public:
-	static std::unique_ptr<IBacklogAccumulator> make(std::uint64_t bitsPerSlot);
+	static std::unique_ptr<IBacklogAccumulator> make(std::uint64_t bitsPerSlot, MetricScope scope = {});
 };
 
 } // namespace starTopologyEmulator

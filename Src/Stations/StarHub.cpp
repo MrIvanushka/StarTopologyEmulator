@@ -1,5 +1,7 @@
 #include "StarHub.h"
 
+#include <cmath>
+
 #include "StarTopologyEmulator/Messages/BacklogReportMessage.h"
 
 namespace starTopologyEmulator
@@ -24,7 +26,10 @@ StarHub::StarHub(
 	, _scope(std::move(scope))
 {
 	if (_scope.active())
+	{
 		_hPendingAnswers = _scope.registerMetric("Очередь ответов станциям");
+		_hDaThroughput = _scope.registerMetric("Пропускная способность DA-сегмента");
+	}
 }
 
 void StarHub::update(Timestamp currentTime)
@@ -82,6 +87,16 @@ void StarHub::onFrameEnd(std::uint64_t frameNumber)
 	_incomeLoadEstimator->update(_frameAccumulator);
 	auto targetFrameNumber = frameNumber + 2 + _tts * 5 / (_frameCalculator->frameConfig().slotDuration * _frameCalculator->frameConfig().slotCountInFrame);
 	auto newPlan = _strategy->generate(frameNumber, targetFrameNumber);
+
+	const double estTotalTransmitting = _incomeLoadEstimator->incomeLoad()
+		* static_cast<double>(_frameAccumulator.totalRaSlots);
+	const double estCollidedRaw = estTotalTransmitting
+		- static_cast<double>(_frameAccumulator.successSlots);
+	const std::uint32_t estCollided = estCollidedRaw > 0.0
+		? static_cast<std::uint32_t>(std::lround(estCollidedRaw))
+		: 0u;
+	newPlan->setCollidedStationCount(estCollided);
+
 	_dynamicFrameSettings->handlePlan(newPlan);
 
 	const Timestamp broadcastTime = _frameCalculator->slotBeginTime(frameNumber + 1, 0);
@@ -99,6 +114,14 @@ void StarHub::onFrameEnd(std::uint64_t frameNumber)
 	sendAnswersToStations(broadcastTime);
 
 	_scope.emit(_hPendingAnswers, frameNumber, static_cast<double>(_pendingAnswers.size()));
+
+	const auto& frameCfg = _frameCalculator->frameConfig();
+	const Timestamp frameDuration = frameCfg.slotDuration * static_cast<Timestamp>(frameCfg.slotCountInFrame);
+	const auto daSlots = currentPlan ? currentPlan->onlineSlotsCountInFrame() : 0u;
+	const double daThroughput = frameDuration > 0
+		? static_cast<double>(daSlots) * static_cast<double>(frameCfg.bitsPerSlot) / static_cast<double>(frameDuration)
+		: 0.0;
+	_scope.emit(_hDaThroughput, frameNumber, daThroughput);
 }
 
 void StarHub::sendAnswersToStations(Timestamp sendTime)

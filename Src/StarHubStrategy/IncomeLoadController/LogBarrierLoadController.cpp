@@ -40,7 +40,7 @@ StarHubPlanMessage::BackoffConfig LogBarrierLoadController::generate(
 	const double rawDelta = _config.gradientStep * gradient;
 	const double delta = clampStep(rawDelta);
 
-	StarHubPlanMessage::BackoffConfig result;
+	StarHubPlanMessage::BackoffConfig result = _config.backoffTemplate;
 	result.pTx = clampProbability(currentP + delta);
 	result.baseWindow = currentBackoff;
 

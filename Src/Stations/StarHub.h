@@ -57,6 +57,7 @@ private:
 
 	MetricScope _scope;
 	MetricHandle _hPendingAnswers = kInvalidMetricHandle;
+	MetricHandle _hDaThroughput = kInvalidMetricHandle;
 };
 
 } // namespace starTopologyEmulator

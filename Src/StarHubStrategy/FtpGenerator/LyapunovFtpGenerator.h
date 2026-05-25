@@ -22,7 +22,9 @@ public:
         std::shared_ptr<IFrameCalculator>,
         LyapunovFtpGeneratorConfig&&);
 
-    StarHubPlanMessage::FtpConfig generate(std::uint64_t frame) override;
+    StarHubPlanMessage::FtpConfig generate(
+            std::uint64_t currentFrame,
+            std::uint64_t targetFrame) override;
 
 private:
     double muRa(double r, double nHat, double ptx) const;

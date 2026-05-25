@@ -32,10 +32,12 @@ public:
         , _frameCalculator(std::move(frameCalculator))
     {}
 
-    StarHubPlanMessage::FtpConfig generate(std::uint64_t frame) override
+    StarHubPlanMessage::FtpConfig generate(
+            std::uint64_t currentFrame,
+            std::uint64_t targetFrame) override
     {
-        const double nHat = _predictor->estimateReadyUsers(frame, frame);
-        const auto   plan = _dynamicFrameSettings->currentPlan(frame);
+        const double nHat = _predictor->estimateReadyUsers(currentFrame, targetFrame);
+        const auto   plan = _dynamicFrameSettings->currentPlan(currentFrame);
         const double ptx  = plan ? plan->backoff().pTx : 0.5;
         const double wb   = plan ? static_cast<double>(plan->backoff().baseWindow) : 1.0;
 
