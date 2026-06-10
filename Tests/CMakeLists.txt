@@ -41,6 +41,9 @@ set(TEST_SOURCES
 	StarStationTest.cpp
 	StarHubTest.cpp
 	EmulatorTest.cpp
+	CrdsaFrameModelTest.cpp
+	Aff3ctPhysicalLinkTest.cpp
+	PhysicalLinkTest.cpp
 	TimeSeriesMetricSinkTest.cpp
 	TrafficProfileTest.cpp
 )
@@ -59,6 +62,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 target_include_directories(${PROJECT_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+if(STE_ENABLE_AFF3CT)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE
+		STE_AFF3CT_TEST_MATRIX="${CMAKE_CURRENT_SOURCE_DIR}/../External/aff3ct/conf/dec/LDPC/AR4JA_4096_8192.qc")
+endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
 	CXX_STANDARD 23

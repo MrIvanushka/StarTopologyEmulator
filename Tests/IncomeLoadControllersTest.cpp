@@ -290,7 +290,7 @@ TEST(PseudoBayesianLoadController, OptimalPTxIsOneOverN)
 	cfg.maxProbability = 1.0;
 
 	auto controller = IncomeLoadControllerFactory::make(predictor, std::move(cfg));
-	const auto out = controller->generate(/*plannedRaSlots=*/4, /*currentFrame=*/3, /*targetFrame=*/5);
+	const auto out = controller->generate(/*plannedRaSlots=*/1, /*currentFrame=*/3, /*targetFrame=*/5);
 
 	EXPECT_NEAR(out.pTx, 0.2, 1e-9);
 }

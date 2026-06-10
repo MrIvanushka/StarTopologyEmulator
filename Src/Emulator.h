@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 
+#include "StarTopologyEmulator/IFaces/ICollisionResolver.h"
 #include "StarTopologyEmulator/IFaces/IEmulator.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IStarHub.h"
@@ -25,6 +26,7 @@ public:
 		std::function<std::shared_ptr<IStarHub>(SendFunc)>,
 		std::unique_ptr<IFrameCalculator>,
 		std::unique_ptr<IFrameCalculator>,
+		std::unique_ptr<ICollisionResolver>,
 		int stationCount,
 		std::shared_ptr<IMetricSink> metricSink = nullptr);
 
@@ -70,6 +72,7 @@ private:
 
 	std::unique_ptr<IFrameCalculator> _abonentFrameCalculator;
 	std::unique_ptr<IFrameCalculator> _hubFrameCalculator;
+	std::unique_ptr<ICollisionResolver> _collisionResolver;
 
 	std::shared_ptr<IStarHub> _hub;
 	std::vector<std::shared_ptr<IStarStation>> _stations;

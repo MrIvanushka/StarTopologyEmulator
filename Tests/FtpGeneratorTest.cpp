@@ -24,7 +24,7 @@ using ::testing::_;
 TEST(StaticFtpGenerator, ReturnsConfiguredCounts)
 {
 	auto gen = FtpGeneratorFactory::make(/*ra=*/5, /*yellow=*/3, /*operation=*/12);
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	EXPECT_EQ(cfg.randomAccessSlotsCountInFrame, 5u);
 	EXPECT_EQ(cfg.yellowSlotsCountInFrame, 3u);
 	EXPECT_EQ(cfg.onlineSlotsCountInFrame, 12u);
@@ -33,9 +33,9 @@ TEST(StaticFtpGenerator, ReturnsConfiguredCounts)
 TEST(StaticFtpGenerator, FrameNumberDoesNotAffectOutput)
 {
 	auto gen = FtpGeneratorFactory::make(7, 2, 9);
-	const auto a = gen->generate(0);
-	const auto b = gen->generate(100);
-	const auto c = gen->generate(987654);
+	const auto a = gen->generate(0, 0);
+	const auto b = gen->generate(100, 100);
+	const auto c = gen->generate(987654, 987654);
 
 	EXPECT_EQ(a.randomAccessSlotsCountInFrame, b.randomAccessSlotsCountInFrame);
 	EXPECT_EQ(b.randomAccessSlotsCountInFrame, c.randomAccessSlotsCountInFrame);
@@ -46,7 +46,7 @@ TEST(StaticFtpGenerator, FrameNumberDoesNotAffectOutput)
 TEST(StaticFtpGenerator, AllZeroIsValid)
 {
 	auto gen = FtpGeneratorFactory::make(0, 0, 0);
-	const auto cfg = gen->generate(42);
+	const auto cfg = gen->generate(42, 42);
 	EXPECT_EQ(cfg.randomAccessSlotsCountInFrame, 0u);
 	EXPECT_EQ(cfg.yellowSlotsCountInFrame, 0u);
 	EXPECT_EQ(cfg.onlineSlotsCountInFrame, 0u);
@@ -158,7 +158,7 @@ protected:
 TEST_F(DynamicFtpGeneratorTest, BacklogFeedback_SlotSumEqualsTotal)
 {
 	auto gen = makeBacklogFeedback();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -173,7 +173,7 @@ TEST_F(DynamicFtpGeneratorTest, BacklogFeedback_YellowSlotsPreserved)
 	cfg.raMax = 50;
 
 	auto gen = makeBacklogFeedback(std::move(cfg));
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.yellowSlotsCountInFrame, 7u);
 }
 
@@ -188,7 +188,7 @@ TEST_F(DynamicFtpGeneratorTest, BacklogFeedback_BaselineFromR0)
 	cfg.raMax = 50;
 
 	auto gen = makeBacklogFeedback(std::move(cfg));
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.randomAccessSlotsCountInFrame, 20u);
 }
 
@@ -207,7 +207,7 @@ TEST_F(DynamicFtpGeneratorTest, BacklogFeedback_RaClampedToMax_WhenRaDemandHigh)
 	cfg.raMax = 50;
 
 	auto gen = makeBacklogFeedback(std::move(cfg));
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.randomAccessSlotsCountInFrame, 50u);
 }
 
@@ -227,7 +227,7 @@ TEST_F(DynamicFtpGeneratorTest, BacklogFeedback_RaClampedToMin_WhenDaBacklogHigh
 	cfg.raMax = 50;
 
 	auto gen = makeBacklogFeedback(std::move(cfg));
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.randomAccessSlotsCountInFrame, 5u);
 }
 
@@ -245,8 +245,8 @@ TEST_F(DynamicFtpGeneratorTest, BacklogFeedback_StepLimitedPerFrame)
 	cfg.raMax = 50;
 
 	auto gen = makeBacklogFeedback(std::move(cfg));
-	const auto first = gen->generate(0);
-	const auto second = gen->generate(1);
+	const auto first = gen->generate(0, 0);
+	const auto second = gen->generate(1, 1);
 
 	EXPECT_EQ(second.randomAccessSlotsCountInFrame,
 		first.randomAccessSlotsCountInFrame + 1u);
@@ -259,7 +259,7 @@ TEST_F(DynamicFtpGeneratorTest, BacklogFeedback_StepLimitedPerFrame)
 TEST_F(DynamicFtpGeneratorTest, ServiceDelay_SlotSumEqualsTotal)
 {
 	auto gen = makeServiceDelay();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -274,7 +274,7 @@ TEST_F(DynamicFtpGeneratorTest, ServiceDelay_YellowSlotsPreserved)
 	cfg.raMax = 50;
 
 	auto gen = makeServiceDelay(std::move(cfg));
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.yellowSlotsCountInFrame, 8u);
 }
 
@@ -285,7 +285,7 @@ TEST_F(DynamicFtpGeneratorTest, ServiceDelay_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeServiceDelay(std::move(cfg));
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -299,7 +299,7 @@ TEST_F(DynamicFtpGeneratorTest, ServiceDelay_ZeroBacklogFavorsMaxRa)
 	cfg.raMax = 50;
 
 	auto gen = makeServiceDelay(std::move(cfg));
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.randomAccessSlotsCountInFrame, 50u);
 }
 
@@ -308,7 +308,7 @@ TEST_F(DynamicFtpGeneratorTest, ServiceDelay_NullPlanDoesNotCrash)
 	ON_CALL(*dynSettings, currentPlan(_)).WillByDefault(Return(nullptr));
 
 	auto gen = makeServiceDelay();
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	const auto total = result.onlineSlotsCountInFrame
 		+ result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame;
@@ -322,7 +322,7 @@ TEST_F(DynamicFtpGeneratorTest, ServiceDelay_NullPlanDoesNotCrash)
 TEST_F(DynamicFtpGeneratorTest, Lyapunov_SlotSumEqualsTotal)
 {
 	auto gen = makeLyapunov();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -337,7 +337,7 @@ TEST_F(DynamicFtpGeneratorTest, Lyapunov_YellowSlotsPreserved)
 	cfg.raMax = 50;
 
 	auto gen = makeLyapunov(std::move(cfg));
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.yellowSlotsCountInFrame, 6u);
 }
 
@@ -352,7 +352,7 @@ TEST_F(DynamicFtpGeneratorTest, Lyapunov_ZeroRaQueue_HighDa_FavorsMinRa)
 	cfg.raMax = 50;
 
 	auto gen = makeLyapunov(std::move(cfg));
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.randomAccessSlotsCountInFrame, 5u);
 }
 
@@ -366,7 +366,7 @@ TEST_F(DynamicFtpGeneratorTest, Lyapunov_HighRaQueue_ZeroDa_FavorsMaxRa)
 	cfg.raMax = 50;
 
 	auto gen = makeLyapunov(std::move(cfg));
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.randomAccessSlotsCountInFrame, 50u);
 }
 
@@ -375,7 +375,7 @@ TEST_F(DynamicFtpGeneratorTest, Lyapunov_NullPlanDoesNotCrash)
 	ON_CALL(*dynSettings, currentPlan(_)).WillByDefault(Return(nullptr));
 
 	auto gen = makeLyapunov();
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	const auto total = result.onlineSlotsCountInFrame
 		+ result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame;
@@ -389,7 +389,7 @@ TEST_F(DynamicFtpGeneratorTest, Lyapunov_NullPlanDoesNotCrash)
 TEST_F(DynamicFtpGeneratorTest, MarginalUtility_SlotSumEqualsTotal)
 {
 	auto gen = makeMarginalUtility();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -404,7 +404,7 @@ TEST_F(DynamicFtpGeneratorTest, MarginalUtility_YellowSlotsPreserved)
 	cfg.raMax = 50;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.yellowSlotsCountInFrame, 9u);
 }
 
@@ -415,7 +415,7 @@ TEST_F(DynamicFtpGeneratorTest, MarginalUtility_BoundsRespected)
 	cfg.raMax = 40;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 8u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 40u);
 }
@@ -433,7 +433,7 @@ TEST_F(DynamicFtpGeneratorTest, MarginalUtility_ZeroBacklogNoColl_FavorsMaxRa)
 	cfg.raMax = 50;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.randomAccessSlotsCountInFrame, 50u);
 }
 
@@ -452,7 +452,7 @@ TEST_F(DynamicFtpGeneratorTest, MarginalUtility_HugeCollisionPenalty_FavorsMinRa
 	cfg.raMax = 50;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.randomAccessSlotsCountInFrame, 5u);
 }
 
@@ -461,7 +461,7 @@ TEST_F(DynamicFtpGeneratorTest, MarginalUtility_NullPlanDoesNotCrash)
 	ON_CALL(*dynSettings, currentPlan(_)).WillByDefault(Return(nullptr));
 
 	auto gen = makeMarginalUtility();
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	const auto total = result.onlineSlotsCountInFrame
 		+ result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame;
@@ -475,7 +475,7 @@ TEST_F(DynamicFtpGeneratorTest, MarginalUtility_NullPlanDoesNotCrash)
 TEST_F(DynamicFtpGeneratorTest, F1Linear_SlotSumEqualsTotal)
 {
 	auto gen = makeMarginalUtility(F1LinearUtilityConfig{});
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -489,7 +489,7 @@ TEST_F(DynamicFtpGeneratorTest, F1Linear_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -499,7 +499,7 @@ TEST_F(DynamicFtpGeneratorTest, F1Linear_NullPlanDoesNotCrash)
 	ON_CALL(*dynSettings, currentPlan(_)).WillByDefault(Return(nullptr));
 
 	auto gen = makeMarginalUtility(F1LinearUtilityConfig{});
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	const auto total = result.onlineSlotsCountInFrame
 		+ result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame;
@@ -513,7 +513,7 @@ TEST_F(DynamicFtpGeneratorTest, F1Linear_NullPlanDoesNotCrash)
 TEST_F(DynamicFtpGeneratorTest, F2Logarithmic_SlotSumEqualsTotal)
 {
 	auto gen = makeMarginalUtility(F2LogarithmicUtilityConfig{});
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -527,7 +527,7 @@ TEST_F(DynamicFtpGeneratorTest, F2Logarithmic_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -539,7 +539,7 @@ TEST_F(DynamicFtpGeneratorTest, F2Logarithmic_BoundsRespected)
 TEST_F(DynamicFtpGeneratorTest, F4Sigmoidal_SlotSumEqualsTotal)
 {
 	auto gen = makeMarginalUtility(F4SigmoidalUtilityConfig{});
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -553,7 +553,7 @@ TEST_F(DynamicFtpGeneratorTest, F4Sigmoidal_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -563,7 +563,7 @@ TEST_F(DynamicFtpGeneratorTest, F4Sigmoidal_NullPlanDoesNotCrash)
 	ON_CALL(*dynSettings, currentPlan(_)).WillByDefault(Return(nullptr));
 
 	auto gen = makeMarginalUtility(F4SigmoidalUtilityConfig{});
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	const auto total = result.onlineSlotsCountInFrame
 		+ result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame;
@@ -577,7 +577,7 @@ TEST_F(DynamicFtpGeneratorTest, F4Sigmoidal_NullPlanDoesNotCrash)
 TEST_F(DynamicFtpGeneratorTest, F5HardDeadline_SlotSumEqualsTotal)
 {
 	auto gen = makeMarginalUtility(F5HardDeadlineUtilityConfig{});
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -591,7 +591,7 @@ TEST_F(DynamicFtpGeneratorTest, F5HardDeadline_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -601,7 +601,7 @@ TEST_F(DynamicFtpGeneratorTest, F5HardDeadline_NullPlanDoesNotCrash)
 	ON_CALL(*dynSettings, currentPlan(_)).WillByDefault(Return(nullptr));
 
 	auto gen = makeMarginalUtility(F5HardDeadlineUtilityConfig{});
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	const auto total = result.onlineSlotsCountInFrame
 		+ result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame;
@@ -615,7 +615,7 @@ TEST_F(DynamicFtpGeneratorTest, F5HardDeadline_NullPlanDoesNotCrash)
 TEST_F(DynamicFtpGeneratorTest, F6CostOfDelay_SlotSumEqualsTotal)
 {
 	auto gen = makeMarginalUtility(F6CostOfDelayUtilityConfig{});
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -629,7 +629,7 @@ TEST_F(DynamicFtpGeneratorTest, F6CostOfDelay_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -639,7 +639,7 @@ TEST_F(DynamicFtpGeneratorTest, F6CostOfDelay_NullPlanDoesNotCrash)
 	ON_CALL(*dynSettings, currentPlan(_)).WillByDefault(Return(nullptr));
 
 	auto gen = makeMarginalUtility(F6CostOfDelayUtilityConfig{});
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	const auto total = result.onlineSlotsCountInFrame
 		+ result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame;
@@ -653,7 +653,7 @@ TEST_F(DynamicFtpGeneratorTest, F6CostOfDelay_NullPlanDoesNotCrash)
 TEST_F(DynamicFtpGeneratorTest, F7QuadraticBacklog_SlotSumEqualsTotal)
 {
 	auto gen = makeMarginalUtility(F7QuadraticBacklogUtilityConfig{});
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -667,7 +667,7 @@ TEST_F(DynamicFtpGeneratorTest, F7QuadraticBacklog_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -677,7 +677,7 @@ TEST_F(DynamicFtpGeneratorTest, F7QuadraticBacklog_NullPlanDoesNotCrash)
 	ON_CALL(*dynSettings, currentPlan(_)).WillByDefault(Return(nullptr));
 
 	auto gen = makeMarginalUtility(F7QuadraticBacklogUtilityConfig{});
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	const auto total = result.onlineSlotsCountInFrame
 		+ result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame;
@@ -691,7 +691,7 @@ TEST_F(DynamicFtpGeneratorTest, F7QuadraticBacklog_NullPlanDoesNotCrash)
 TEST_F(DynamicFtpGeneratorTest, F8Ces_SlotSumEqualsTotal)
 {
 	auto gen = makeMarginalUtility(F8CesUtilityConfig{});
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	const auto total = cfg.onlineSlotsCountInFrame
 		+ cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame;
@@ -704,7 +704,7 @@ TEST_F(DynamicFtpGeneratorTest, F8Ces_CobbDouglas_SlotSumEqualsTotal)
 	cfg.rho = 0.0;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	const auto total = result.onlineSlotsCountInFrame
 		+ result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame;
@@ -718,7 +718,7 @@ TEST_F(DynamicFtpGeneratorTest, F8Ces_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeMarginalUtility(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -728,7 +728,7 @@ TEST_F(DynamicFtpGeneratorTest, F8Ces_NullPlanDoesNotCrash)
 	ON_CALL(*dynSettings, currentPlan(_)).WillByDefault(Return(nullptr));
 
 	auto gen = makeMarginalUtility(F8CesUtilityConfig{});
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	const auto total = result.onlineSlotsCountInFrame
 		+ result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame;
@@ -742,7 +742,7 @@ TEST_F(DynamicFtpGeneratorTest, F8Ces_NullPlanDoesNotCrash)
 TEST_F(DynamicFtpGeneratorTest, IndividualF1Linear_SlotSumEqualsTotal)
 {
 	auto gen = makeF1Linear();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	EXPECT_EQ(cfg.onlineSlotsCountInFrame + cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame, 100u);
 }
@@ -754,7 +754,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF1Linear_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeF1Linear(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -764,7 +764,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF1Linear_NullPlanDoesNotCrash)
 	ON_CALL(*dynSettings, currentPlan(_)).WillByDefault(Return(nullptr));
 
 	auto gen = makeF1Linear();
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.onlineSlotsCountInFrame + result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame, 100u);
 }
@@ -772,7 +772,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF1Linear_NullPlanDoesNotCrash)
 TEST_F(DynamicFtpGeneratorTest, IndividualF2Logarithmic_SlotSumEqualsTotal)
 {
 	auto gen = makeF2Logarithmic();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	EXPECT_EQ(cfg.onlineSlotsCountInFrame + cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame, 100u);
 }
@@ -784,7 +784,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF2Logarithmic_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeF2Logarithmic(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -792,7 +792,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF2Logarithmic_BoundsRespected)
 TEST_F(DynamicFtpGeneratorTest, IndividualF3AlphaFair_SlotSumEqualsTotal)
 {
 	auto gen = makeF3AlphaFair();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	EXPECT_EQ(cfg.onlineSlotsCountInFrame + cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame, 100u);
 }
@@ -808,14 +808,14 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF3AlphaFair_ZeroBacklogNoColl_FavorsMa
 	cfg.raMax = 50;
 
 	auto gen = makeF3AlphaFair(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.randomAccessSlotsCountInFrame, 50u);
 }
 
 TEST_F(DynamicFtpGeneratorTest, IndividualF4Sigmoidal_SlotSumEqualsTotal)
 {
 	auto gen = makeF4Sigmoidal();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	EXPECT_EQ(cfg.onlineSlotsCountInFrame + cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame, 100u);
 }
@@ -827,7 +827,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF4Sigmoidal_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeF4Sigmoidal(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -835,7 +835,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF4Sigmoidal_BoundsRespected)
 TEST_F(DynamicFtpGeneratorTest, IndividualF5HardDeadline_SlotSumEqualsTotal)
 {
 	auto gen = makeF5HardDeadline();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	EXPECT_EQ(cfg.onlineSlotsCountInFrame + cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame, 100u);
 }
@@ -847,7 +847,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF5HardDeadline_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeF5HardDeadline(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -855,7 +855,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF5HardDeadline_BoundsRespected)
 TEST_F(DynamicFtpGeneratorTest, IndividualF6CostOfDelay_SlotSumEqualsTotal)
 {
 	auto gen = makeF6CostOfDelay();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	EXPECT_EQ(cfg.onlineSlotsCountInFrame + cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame, 100u);
 }
@@ -867,7 +867,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF6CostOfDelay_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeF6CostOfDelay(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -875,7 +875,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF6CostOfDelay_BoundsRespected)
 TEST_F(DynamicFtpGeneratorTest, IndividualF7QuadraticBacklog_SlotSumEqualsTotal)
 {
 	auto gen = makeF7QuadraticBacklog();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	EXPECT_EQ(cfg.onlineSlotsCountInFrame + cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame, 100u);
 }
@@ -887,7 +887,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF7QuadraticBacklog_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeF7QuadraticBacklog(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }
@@ -895,7 +895,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF7QuadraticBacklog_BoundsRespected)
 TEST_F(DynamicFtpGeneratorTest, IndividualF8Ces_SlotSumEqualsTotal)
 {
 	auto gen = makeF8Ces();
-	const auto cfg = gen->generate(0);
+	const auto cfg = gen->generate(0, 0);
 	EXPECT_EQ(cfg.onlineSlotsCountInFrame + cfg.yellowSlotsCountInFrame
 		+ cfg.randomAccessSlotsCountInFrame, 100u);
 }
@@ -906,7 +906,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF8Ces_CobbDouglas_SlotSumEqualsTotal)
 	cfg.rho = 0.0;
 
 	auto gen = makeF8Ces(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_EQ(result.onlineSlotsCountInFrame + result.yellowSlotsCountInFrame
 		+ result.randomAccessSlotsCountInFrame, 100u);
 }
@@ -918,7 +918,7 @@ TEST_F(DynamicFtpGeneratorTest, IndividualF8Ces_BoundsRespected)
 	cfg.raMax = 30;
 
 	auto gen = makeF8Ces(cfg);
-	const auto result = gen->generate(0);
+	const auto result = gen->generate(0, 0);
 	EXPECT_GE(result.randomAccessSlotsCountInFrame, 10u);
 	EXPECT_LE(result.randomAccessSlotsCountInFrame, 30u);
 }

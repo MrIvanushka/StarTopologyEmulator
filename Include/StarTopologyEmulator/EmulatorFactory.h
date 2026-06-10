@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "StarTopologyEmulator/CommonTypedefs.h"
+#include "StarTopologyEmulator/IFaces/ICollisionResolver.h"
 #include "StarTopologyEmulator/IFaces/IEmulator.h"
 #include "StarTopologyEmulator/IFaces/IFrameCalculator.h"
 #include "StarTopologyEmulator/IFaces/IStarHub.h"
@@ -24,6 +25,7 @@ struct STAR_TOPOLOGY_EMULATOR_LIB_EXPORT EmulatorInitData
 	std::function<std::shared_ptr<IStarHub>(SendFunc)> hubFactory;
 	std::unique_ptr<IFrameCalculator> abonentFrameCalculator;
 	std::unique_ptr<IFrameCalculator> hubFrameCalculator;
+	std::unique_ptr<ICollisionResolver> collisionResolver;
 	int stationCount = 10;
 	std::shared_ptr<IMetricSink> metricSink;
 };

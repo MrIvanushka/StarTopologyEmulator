@@ -1,6 +1,5 @@
 #include "Emulator.h"
 
-#include "StarTopologyEmulator/Messages/CollisionReport.h"
 #include "StarTopologyEmulator/Messages/StarHubAccessMessage.h"
 #include "StarTopologyEmulator/Metrics/StationStatsCollector.h"
 
@@ -12,6 +11,7 @@ Emulator::Emulator(
 	std::function<std::shared_ptr<IStarHub>(SendFunc)> hubFactory,
 	std::unique_ptr<IFrameCalculator> abonentFrameCalculator,
 	std::unique_ptr<IFrameCalculator> hubFrameCalculator,
+	std::unique_ptr<ICollisionResolver> collisionResolver,
 	int stationCount,
 	std::shared_ptr<IMetricSink> metricSink)
 	: _metricSink(std::move(metricSink))
@@ -19,6 +19,7 @@ Emulator::Emulator(
 	_stations.resize(stationCount);
 	_abonentFrameCalculator = std::move(abonentFrameCalculator);
 	_hubFrameCalculator = std::move(hubFrameCalculator);
+	_collisionResolver = std::move(collisionResolver);
 
 	if (_metricSink)
 	{
@@ -133,10 +134,9 @@ void Emulator::updateDownlink(Timestamp now, const std::vector<QueuedMessage>& r
 
 void Emulator::updateUplink(Timestamp now, const std::vector<QueuedMessage>& releasedMessages)
 {
-	Timestamp deliveryTime = 0;
-	std::map<Timestamp, std::vector<std::shared_ptr<IMessage>>> msgs;
+	std::vector<ICollisionResolver::SlotTransmission> transmissions;
 
-	for (auto& message : releasedMessages)
+	for (const auto& message : releasedMessages)
 	{
 		if (message.direction != Direction::ToHub)
 			continue;
@@ -147,21 +147,16 @@ void Emulator::updateUplink(Timestamp now, const std::vector<QueuedMessage>& rel
 			continue;
 		}
 
-		msgs[message.deliveryTime].push_back(message.msg);
+		const auto moment = _hubFrameCalculator->frameMoment(message.deliveryTime);
+		transmissions.push_back(
+			{ static_cast<starTopologyEmulator::Timestamp>(message.deliveryTime), moment.slotNumber, message.msg });
 	}
-	for (auto pair : msgs)
-	{
-		if (pair.second.size() == 1)
-		{
-			_uplinkOk += 1;
-			_hub->handleMessage(pair.second[0], pair.first);
-		}
-		else if (pair.second.size() > 1)
-		{
-			_uplinkLost += static_cast<std::uint64_t>(pair.second.size());
-			_hub->handleMessage(std::make_shared<CollisionReport>(), pair.first);
-		}
-	}
+
+	auto outcome = _collisionResolver->resolveFrame(std::move(transmissions));
+	_uplinkOk += outcome.okCount;
+	_uplinkLost += outcome.lostCount;
+	for (auto& delivered : outcome.toHub)
+		_hub->handleMessage(delivered.msg, delivered.deliveryTime);
 }
 
 std::uint32_t Emulator::stationsCountOnState(TerminalState state) const

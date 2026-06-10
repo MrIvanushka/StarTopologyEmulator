@@ -94,7 +94,7 @@ TEST(CommonStarHubStrategy, UsesFtpGeneratorOutputForRaSlots)
 	fixedBackoff.baseWindow = 4;
 
 	auto ftpGen = std::make_unique<NiceMock<MockFtpGenerator>>();
-	ON_CALL(*ftpGen, generate(_)).WillByDefault(Return(ftp));
+	ON_CALL(*ftpGen, generate(_, _)).WillByDefault(Return(ftp));
 
 	auto controller = std::make_unique<NiceMock<MockIncomeLoadController>>();
 	ON_CALL(*controller, generate(_, _, _)).WillByDefault(Return(fixedBackoff));
@@ -120,7 +120,7 @@ TEST(CommonStarHubStrategy, PassesControllerBackoffThrough)
 	fixedBackoff.maxWindow = 64;
 
 	auto ftpGen = std::make_unique<NiceMock<MockFtpGenerator>>();
-	ON_CALL(*ftpGen, generate(_)).WillByDefault(Return(ftp));
+	ON_CALL(*ftpGen, generate(_, _)).WillByDefault(Return(ftp));
 
 	auto controller = std::make_unique<NiceMock<MockIncomeLoadController>>();
 	ON_CALL(*controller, generate(_, _, _)).WillByDefault(Return(fixedBackoff));
@@ -136,7 +136,7 @@ TEST(CommonStarHubStrategy, PassesControllerBackoffThrough)
 TEST(CommonStarHubStrategy, ForwardsTargetFrameToFtpGenerator)
 {
 	auto ftpGen = std::make_unique<NiceMock<MockFtpGenerator>>();
-	EXPECT_CALL(*ftpGen, generate(/*targetFrame=*/9))
+	EXPECT_CALL(*ftpGen, generate(/*current=*/4, /*target=*/9))
 		.Times(1)
 		.WillOnce(Return(StarHubPlanMessage::FtpConfig{}));
 
